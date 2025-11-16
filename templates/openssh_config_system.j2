@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+# System-wide OpenSSH Client Configuration
+
+# Send environment variables
+{% if openssh_client_system.send_env is defined and openssh_client_system.send_env | length > 0 %}
+SendEnv {{ openssh_client_system.send_env | join(' ') }}
+{% endif %}
+
+# Security settings
+ForwardAgent {{ 'yes' if openssh_client_system.forward_agent else 'no' }}
+HashKnownHosts yes
+
+# Connection settings
+Host *
+    ServerAliveInterval 60
+    ServerAliveCountMax 3

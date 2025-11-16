@@ -1,0 +1,31 @@
+# {{ ansible_managed }}
+# User OpenSSH Client Configuration for {{ openssh_user_config.user }}
+
+{% for host_config in openssh_user_config.config %}
+Host {{ host_config.host }}
+{% if host_config.hostname is defined %}
+    HostName {{ host_config.hostname }}
+{% endif %}
+{% if host_config.user is defined %}
+    User {{ host_config.user }}
+{% endif %}
+{% if host_config.identity_file is defined %}
+    IdentityFile {{ host_config.identity_file }}
+{% endif %}
+{% if host_config.forward_agent is defined %}
+    ForwardAgent {{ 'yes' if host_config.forward_agent else 'no' }}
+{% endif %}
+{% if host_config.proxy_jump is defined %}
+    ProxyJump {{ host_config.proxy_jump }}
+{% endif %}
+{% if host_config.strict_host_key_checking is defined %}
+    StrictHostKeyChecking {{ 'yes' if host_config.strict_host_key_checking else 'no' }}
+{% endif %}
+{% if host_config.user_known_hosts_file is defined %}
+    UserKnownHostsFile {{ host_config.user_known_hosts_file }}
+{% endif %}
+{% if host_config.port is defined %}
+    Port {{ host_config.port }}
+{% endif %}
+
+{% endfor %}

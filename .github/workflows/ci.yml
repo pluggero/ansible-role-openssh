@@ -1,0 +1,156 @@
+---
+name: CI
+"on":
+  pull_request:
+  schedule:
+    - cron: "0 7 * * 5"
+
+concurrency:
+  group: ansible-roles-ci
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: "pluggero.openssh"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the codebase
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          path: "pluggero.openssh"
+
+      - name: Set up Python 3
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
+        with:
+          python-version: "3.13"
+
+      - name: Install test dependencies
+        run: pip3 install -r requirements.txt
+
+      - name: Run yamllint
+        run: |
+          yamllint .
+
+      - name: Run ansible-lint
+        uses: ansible/ansible-lint@43e758bad47344f1ce7b699c0020299f486a8026 # v25.11.0
+        with:
+          working_directory: "pluggero.openssh"
+          requirements_file: "requirements.yml"
+
+  molecule:
+    name: Molecule
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      matrix:
+        include:
+          - vagrant_box: debian12
+            vagrant_box_version: "1.4.0"
+          - vagrant_box: archlinux
+            vagrant_box_version: "1.4.0"
+    env:
+      VBOX_VERSION: "7.1.12"
+      VBOX_DEB_DISTRO: "Ubuntu"
+      VBOX_DEB_CODENAME: "noble"
+
+    steps:
+      - name: Check out the codebase
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          path: "pluggero.openssh"
+
+      - name: Set up Python 3
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
+        with:
+          python-version: "3.13"
+
+      - name: Install test dependencies
+        run: pip3 install -r requirements.txt
+
+      - name: Get VirtualBox build ID
+        id: get-build-id
+        run: |
+          echo "Detecting VirtualBox build ID for version ${VBOX_VERSION}..."
+          BUILD_ID=$(curl -s "https://download.virtualbox.org/virtualbox/${VBOX_VERSION}/" | \
+                    grep -oP 'virtualbox-[0-9.]+_[0-9.]+-\K[0-9]+(?=~'${VBOX_DEB_DISTRO}'~'${VBOX_DEB_CODENAME}')' | \
+                    head -1)
+
+          if [ -z "$BUILD_ID" ]; then
+            echo "Error: Could not detect build ID for VirtualBox ${VBOX_VERSION}"
+            echo "Available files:"
+            curl -s "https://download.virtualbox.org/virtualbox/${VBOX_VERSION}/" | grep -o 'virtualbox-[^"]*\.deb'
+            exit 1
+          fi
+
+          echo "Detected build ID: $BUILD_ID"
+          echo "VBOX_BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
+
+      - name: Construct and validate VBOX_DEB_URL
+        run: |
+          export VBOX_BRANCH="${VBOX_VERSION%.*}"
+          export VBOX_DEB_FILE="virtualbox-${VBOX_BRANCH}_${VBOX_VERSION}-${VBOX_BUILD_ID}~${VBOX_DEB_DISTRO}~${VBOX_DEB_CODENAME}_amd64.deb"
+          export VBOX_DEB_URL="https://download.virtualbox.org/virtualbox/${VBOX_VERSION}/${VBOX_DEB_FILE}"
+          echo "Constructed URL: $VBOX_DEB_URL"
+
+          # Validate that the file exists
+          if curl --output /dev/null --silent --head --fail "$VBOX_DEB_URL"; then
+            echo "VirtualBox package file confirmed to exist"
+            echo "VBOX_DEB_URL=$VBOX_DEB_URL" >> $GITHUB_ENV
+          else
+            echo "Error: VirtualBox package file does not exist at $VBOX_DEB_URL"
+            echo "Build ID $VBOX_BUILD_ID may be incorrect for this version/platform combination"
+            exit 1
+          fi
+
+      - name: Install VirtualBox
+        run: |
+          wget -O- https://www.virtualbox.org/download/oracle_vbox_2016.asc \
+            | sudo gpg --dearmor --yes --output /usr/share/keyrings/oracle-virtualbox-2016.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/oracle-virtualbox-2016.gpg] \
+            http://download.virtualbox.org/virtualbox/debian $(lsb_release -cs) contrib" \
+            | sudo tee /etc/apt/sources.list.d/virtualbox.list
+          sudo apt update
+          sudo apt install -y linux-headers-$(uname -r) dkms
+          wget ${{ env.VBOX_DEB_URL }} -O /tmp/virtualbox.deb
+          sudo apt install -y /tmp/virtualbox.deb
+
+      - name: Verify VirtualBox installation
+        run: VBoxManage --version
+
+      - name: install vagrant
+        run: |
+          wget -O- https://apt.releases.hashicorp.com/gpg \
+            | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+            https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
+            | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt update
+          sudo apt install -y vagrant
+
+      - name: Verify Vagrant installation
+        run: vagrant --version
+
+      - name: Run Molecule tests
+        run: molecule test
+        env:
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"
+          MOLECULE_DISTRO: ${{ matrix.vagrant_box }}
+          MOLECULE_VAGRANT_BOX_VERSION: ${{ matrix.vagrant_box_version }}
+
+  status-check:
+    name: Status Check
+    runs-on: ubuntu-latest
+    needs: [lint, molecule]
+    if: always()
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Check all jobs passed
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: exit 1

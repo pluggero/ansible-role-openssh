@@ -1,0 +1,357 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  become: true
+
+  vars:
+    openssh_expected_packages:
+      Debian:
+        - openssh-client
+        - openssh-server
+      Archlinux:
+        - openssh
+    openssh_service_name:
+      Debian: ssh
+      Archlinux: sshd
+
+  tasks:
+    # ========================================
+    # Package Installation Verification
+    # ========================================
+    - name: Verify OpenSSH packages are installed (Debian)
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert OpenSSH packages are installed
+      ansible.builtin.assert:
+        that:
+          - item in ansible_facts.packages
+        fail_msg: "Package {{ item }} is not installed"
+        success_msg: "Package {{ item }} is installed"
+      loop: "{{ openssh_expected_packages[ansible_os_family] }}"
+
+    # ========================================
+    # SSH Server Configuration File Verification
+    # ========================================
+    - name: Check if /etc/ssh/sshd_config exists
+      ansible.builtin.stat:
+        path: /etc/ssh/sshd_config
+      register: sshd_config_stat
+
+    - name: Assert /etc/ssh/sshd_config exists
+      ansible.builtin.assert:
+        that:
+          - sshd_config_stat.stat.exists
+          - sshd_config_stat.stat.isreg
+          - sshd_config_stat.stat.mode == '0644'
+          - sshd_config_stat.stat.pw_name == 'root'
+          - sshd_config_stat.stat.gr_name == 'root'
+        fail_msg: "/etc/ssh/sshd_config does not exist or has incorrect permissions"
+        success_msg: "/etc/ssh/sshd_config exists with correct permissions"
+
+    # ========================================
+    # SSH Server Configuration Content Validation
+    # ========================================
+    - name: Read sshd_config content
+      ansible.builtin.slurp:
+        src: /etc/ssh/sshd_config
+      register: sshd_config_content
+
+    - name: Set sshd_config as fact
+      ansible.builtin.set_fact:
+        sshd_config_lines: "{{ (sshd_config_content.content | b64decode).split('\n') }}"
+
+    - name: Assert Port configuration
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^Port 22$') | list | length > 0
+        fail_msg: "Port 22 not configured in sshd_config"
+        success_msg: "Port 22 is configured"
+
+    - name: Assert ListenAddress configuration
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^ListenAddress 0.0.0.0$') | list | length > 0
+          - sshd_config_lines | select('match', '^ListenAddress ::$') | list | length > 0
+        fail_msg: "ListenAddress not configured correctly"
+        success_msg: "ListenAddress configured for IPv4 and IPv6"
+
+    - name: Assert PermitRootLogin is disabled
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^PermitRootLogin no$') | list | length > 0
+        fail_msg: "PermitRootLogin is not set to 'no'"
+        success_msg: "PermitRootLogin is disabled"
+
+    - name: Assert PasswordAuthentication is disabled
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^PasswordAuthentication no$') | list | length > 0
+        fail_msg: "PasswordAuthentication is not set to 'no'"
+        success_msg: "PasswordAuthentication is disabled"
+
+    - name: Assert PubkeyAuthentication is enabled
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^PubkeyAuthentication yes$') | list | length > 0
+        fail_msg: "PubkeyAuthentication is not set to 'yes'"
+        success_msg: "PubkeyAuthentication is enabled"
+
+    - name: Assert AuthenticationMethods is configured
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^AuthenticationMethods publickey$') | list | length > 0
+        fail_msg: "AuthenticationMethods not set to 'publickey'"
+        success_msg: "AuthenticationMethods is configured correctly"
+
+    - name: Assert KexAlgorithms includes secure algorithms
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^KexAlgorithms .*curve25519-sha256.*') | list | length > 0
+          - sshd_config_lines | select('match', '^KexAlgorithms .*sntrup761x25519-sha512@openssh.com.*') | list | length > 0
+        fail_msg: "KexAlgorithms does not include expected secure algorithms"
+        success_msg: "KexAlgorithms configured with secure algorithms"
+
+    - name: Assert Ciphers includes secure ciphers
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^Ciphers .*chacha20-poly1305@openssh.com.*') | list | length > 0
+          - sshd_config_lines | select('match', '^Ciphers .*aes256-gcm@openssh.com.*') | list | length > 0
+        fail_msg: "Ciphers does not include expected secure ciphers"
+        success_msg: "Ciphers configured with secure algorithms"
+
+    - name: Assert MACs includes secure MACs
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^MACs .*hmac-sha2-512-etm@openssh.com.*') | list | length > 0
+          - sshd_config_lines | select('match', '^MACs .*hmac-sha2-256-etm@openssh.com.*') | list | length > 0
+        fail_msg: "MACs does not include expected secure algorithms"
+        success_msg: "MACs configured with secure algorithms"
+
+    - name: Validate sshd configuration syntax
+      ansible.builtin.command: sshd -t
+      register: sshd_test
+      changed_when: false
+      failed_when: sshd_test.rc != 0
+
+    - name: Assert sshd configuration is valid
+      ansible.builtin.assert:
+        that:
+          - sshd_test.rc == 0
+        fail_msg: "sshd configuration validation failed"
+        success_msg: "sshd configuration is valid"
+
+    - name: Get effective sshd configuration for PermitRootLogin
+      ansible.builtin.shell: set -o pipefail && sshd -T | grep -i "^permitrootlogin"
+      args:
+        executable: /bin/bash
+      register: sshd_effective_config
+      changed_when: false
+      failed_when: false
+
+    - name: Debug var
+      ansible.builtin.debug:
+        var: sshd_effective_config
+
+    - name: Assert PermitRootLogin is set to 'no' in effective configuration
+      ansible.builtin.assert:
+        that:
+          - sshd_effective_config.stdout == 'permitrootlogin no'
+        fail_msg: "PermitRootLogin is not set to 'no' in effective sshd configuration. Got: {{ sshd_effective_config.stdout }}"
+        success_msg: "PermitRootLogin is set to 'no' in effective sshd configuration"
+
+    # ========================================
+    # SSH Client Configuration Verification (System)
+    # ========================================
+    - name: Check if /etc/ssh/ssh_config exists
+      ansible.builtin.stat:
+        path: /etc/ssh/ssh_config
+      register: ssh_config_stat
+
+    - name: Assert /etc/ssh/ssh_config exists
+      ansible.builtin.assert:
+        that:
+          - ssh_config_stat.stat.exists
+          - ssh_config_stat.stat.isreg
+          - ssh_config_stat.stat.mode == '0644'
+          - ssh_config_stat.stat.pw_name == 'root'
+          - ssh_config_stat.stat.gr_name == 'root'
+        fail_msg: "/etc/ssh/ssh_config does not exist or has incorrect permissions"
+        success_msg: "/etc/ssh/ssh_config exists with correct permissions"
+
+    - name: Read ssh_config content
+      ansible.builtin.slurp:
+        src: /etc/ssh/ssh_config
+      register: ssh_config_content
+
+    - name: Set ssh_config as fact
+      ansible.builtin.set_fact:
+        ssh_config_lines: "{{ (ssh_config_content.content | b64decode).split('\n') }}"
+
+    - name: Assert SendEnv is configured
+      ansible.builtin.assert:
+        that:
+          - ssh_config_lines | select('match', '^\s*SendEnv LANG LC_\*$') | list | length > 0
+        fail_msg: "SendEnv not configured in ssh_config"
+        success_msg: "SendEnv is configured"
+
+    - name: Assert ForwardAgent is disabled
+      ansible.builtin.assert:
+        that:
+          - ssh_config_lines | select('match', '^\s*ForwardAgent no$') | list | length > 0
+        fail_msg: "ForwardAgent is not disabled"
+        success_msg: "ForwardAgent is disabled"
+
+    - name: Assert HashKnownHosts is enabled
+      ansible.builtin.assert:
+        that:
+          - ssh_config_lines | select('match', '^\s*HashKnownHosts yes$') | list | length > 0
+        fail_msg: "HashKnownHosts is not enabled"
+        success_msg: "HashKnownHosts is enabled"
+
+    # ========================================
+    # SSH Client Configuration Verification (Per-user)
+    # ========================================
+    - name: Check if testuser .ssh directory exists
+      ansible.builtin.stat:
+        path: /home/testuser/.ssh
+      register: testuser_ssh_dir
+
+    - name: Assert testuser .ssh directory exists with correct permissions
+      ansible.builtin.assert:
+        that:
+          - testuser_ssh_dir.stat.exists
+          - testuser_ssh_dir.stat.isdir
+          - testuser_ssh_dir.stat.mode == '0700'
+          - testuser_ssh_dir.stat.pw_name == 'testuser'
+        fail_msg: "/home/testuser/.ssh does not exist or has incorrect permissions"
+        success_msg: "/home/testuser/.ssh exists with correct permissions"
+
+    - name: Check if testuser .ssh/config exists
+      ansible.builtin.stat:
+        path: /home/testuser/.ssh/config
+      register: testuser_ssh_config
+
+    - name: Assert testuser .ssh/config exists with correct permissions
+      ansible.builtin.assert:
+        that:
+          - testuser_ssh_config.stat.exists
+          - testuser_ssh_config.stat.isreg
+          - testuser_ssh_config.stat.mode == '0600'
+          - testuser_ssh_config.stat.pw_name == 'testuser'
+        fail_msg: "/home/testuser/.ssh/config does not exist or has incorrect permissions"
+        success_msg: "/home/testuser/.ssh/config exists with correct permissions"
+
+    - name: Read testuser ssh config content
+      ansible.builtin.slurp:
+        src: /home/testuser/.ssh/config
+      register: testuser_config_content
+
+    - name: Assert testuser config contains example.com host configuration
+      ansible.builtin.assert:
+        that:
+          - "'example.com' in (testuser_config_content.content | b64decode)"
+        fail_msg: "testuser .ssh/config does not contain expected host configuration"
+        success_msg: "testuser .ssh/config contains host configuration"
+
+    # ========================================
+    # Privilege Separation Directory Verification
+    # ========================================
+    - name: Check if /run/sshd directory exists
+      ansible.builtin.stat:
+        path: /run/sshd
+      register: run_sshd_stat
+
+    - name: Assert /run/sshd directory exists
+      ansible.builtin.assert:
+        that:
+          - run_sshd_stat.stat.exists
+          - run_sshd_stat.stat.isdir
+          - run_sshd_stat.stat.mode == '0755'
+        fail_msg: "/run/sshd does not exist or has incorrect permissions"
+        success_msg: "/run/sshd exists with correct permissions"
+
+    # ========================================
+    # Service State Verification
+    # ========================================
+    - name: Get sshd service status
+      ansible.builtin.systemd:
+        name: "{{ openssh_service_name[ansible_os_family] }}"
+      register: sshd_service_status
+
+    - name: Assert sshd service is running and enabled
+      ansible.builtin.assert:
+        that:
+          - sshd_service_status.status.ActiveState == 'active'
+          - sshd_service_status.status.UnitFileState == 'enabled'
+        fail_msg: "sshd service is not running or not enabled"
+        success_msg: "sshd service is running and enabled"
+
+    # ========================================
+    # Connectivity Verification
+    # ========================================
+    - name: Wait for SSH port 22 to be available
+      ansible.builtin.wait_for:
+        port: 22
+        host: 0.0.0.0
+        timeout: 10
+      register: port_check
+
+    - name: Assert SSH port is listening
+      ansible.builtin.assert:
+        that:
+          - port_check is succeeded
+        fail_msg: "SSH is not listening on port 22"
+        success_msg: "SSH is listening on port 22"
+
+    # ========================================
+    # Security Verification Tests
+    # ========================================
+    - name: Create temporary SSH key for testing
+      ansible.builtin.command: ssh-keygen -t ed25519 -f /tmp/test_key -N ''
+      args:
+        creates: /tmp/test_key
+      changed_when: false
+
+    - name: Test that password authentication is actually blocked
+      ansible.builtin.shell: |
+        ssh -o PasswordAuthentication=yes \
+            -o PubkeyAuthentication=no \
+            -o PreferredAuthentications=password \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -o ConnectTimeout=5 \
+            testuser@localhost echo "connected" 2>&1
+      register: password_auth_test
+      changed_when: false
+      failed_when: false
+      async: 10
+      poll: 1
+
+    - name: Debug password auth test output
+      ansible.builtin.debug:
+        var: password_auth_test
+
+    - name: Assert password authentication is blocked
+      ansible.builtin.assert:
+        that:
+          - password_auth_test.finished == 1
+          - password_auth_test.rc != 0
+          - "'password' not in password_auth_test.stdout"
+        fail_msg: |
+          Password authentication is not properly blocked.
+          Finished: {{ password_auth_test.get('finished', 'N/A') }}
+          RC: {{ password_auth_test.get('rc', 'N/A') }}
+          Stdout: {{ password_auth_test.get('stdout', 'N/A') }}
+          Stderr: {{ password_auth_test.get('stderr', 'N/A') }}
+        success_msg: "Password authentication is properly blocked"
+
+    - name: Clean up temporary SSH key
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/test_key
+        - /tmp/test_key.pub
+      changed_when: false

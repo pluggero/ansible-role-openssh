@@ -1,0 +1,5 @@
+---
+openssh_distro_pkgs:
+  - openssh
+
+openssh_service_name: sshd

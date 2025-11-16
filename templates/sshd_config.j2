@@ -1,0 +1,40 @@
+# {{ ansible_managed }}
+# OpenSSH Server Configuration
+
+# Network
+Port {{ openssh_server.port }}
+{% for addr in openssh_server.listen_address %}
+ListenAddress {{ addr }}
+{% endfor %}
+
+# Authentication
+PermitRootLogin {{ 'yes' if openssh_server.permit_root_login else 'no' }}
+PubkeyAuthentication {{ 'yes' if openssh_server.pubkey_authentication else 'no' }}
+PasswordAuthentication {{ 'yes' if openssh_server.password_authentication else 'no' }}
+{% if openssh_server.authentication_methods is defined %}
+AuthenticationMethods {{ openssh_server.authentication_methods }}
+{% endif %}
+
+# Cryptography
+{% if openssh_server.kex is defined and openssh_server.kex | length > 0 %}
+KexAlgorithms {{ openssh_server.kex | join(',') }}
+{% endif %}
+{% if openssh_server.ciphers is defined and openssh_server.ciphers | length > 0 %}
+Ciphers {{ openssh_server.ciphers | join(',') }}
+{% endif %}
+{% if openssh_server.macs is defined and openssh_server.macs | length > 0 %}
+MACs {{ openssh_server.macs | join(',') }}
+{% endif %}
+
+# Logging
+SyslogFacility AUTH
+LogLevel INFO
+
+# Additional security settings
+PermitEmptyPasswords no
+ChallengeResponseAuthentication no
+UsePAM yes
+X11Forwarding yes
+PrintMotd no
+AcceptEnv LANG LC_*
+Subsystem sftp /usr/lib/openssh/sftp-server

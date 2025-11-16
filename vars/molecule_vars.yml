@@ -1,0 +1,11 @@
+---
+openssh_service_enabled: true
+
+openssh_client_users:
+  - user: testuser
+    config:
+      - host: example.com
+        hostname: example.com
+        user: testuser
+        port: 22
+        identity_file: ~/.ssh/id_ed25519

@@ -1,0 +1,29 @@
+---
+- name: Ensure we are using pacman
+  ansible.builtin.fail:
+    msg: "This role only supports {{ ansible_os_family }} systems that use pacman as a package manager."
+  when: ansible_pkg_mgr != "pacman"
+
+- name: Checks OpenSSH version in package manager
+  when: openssh_distro_pkgs is defined and openssh_distro_pkgs | length > 0
+  block:
+    - name: Update pacman cache
+      community.general.pacman:
+        update_cache: true
+      become: true
+
+    - name: Get OpenSSH version from package manager
+      ansible.builtin.command:
+        cmd: "pacman -Si {{ openssh_distro_pkgs[0] }}"
+      changed_when: false
+      failed_when: false
+      ignore_errors: true
+      register: openssh_pkg_mgr_version_cmd
+
+    - name: Extract only the version into a variable
+      ansible.builtin.set_fact:
+        openssh_pkg_mgr_version: "{{ (openssh_pkg_mgr_version_cmd.stdout | regex_search('Version.*?([\\d\\.]+)', '\\1', multiline=True))[0] }}"
+
+    - name: Debug OpenSSH version from package manager
+      ansible.builtin.debug:
+        var: openssh_pkg_mgr_version

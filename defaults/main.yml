@@ -1,0 +1,44 @@
+---
+openssh_install_method: "package"
+openssh_force_install: false
+openssh_service_enabled: false
+
+# openssh Server Configuration
+openssh_server:
+  port: 22
+  listen_address: ["0.0.0.0", "::"]
+  permit_root_login: false
+  password_authentication: false
+  pubkey_authentication: true
+  authentication_methods: "publickey"
+  kex:
+    - "curve25519-sha256"
+    - "sntrup761x25519-sha512@openssh.com"
+  ciphers:
+    - "chacha20-poly1305@openssh.com"
+    - "aes256-gcm@openssh.com"
+  macs:
+    - "hmac-sha2-512-etm@openssh.com"
+    - "hmac-sha2-256-etm@openssh.com"
+
+# OpenSSH Client System-wide Configuration
+openssh_client_system:
+  send_env: ["LANG", "LC_*"]
+  forward_agent: false
+
+openssh_client_users: []
+# OpenSSH Client Per-User Configuration
+# Example:
+# openssh_client_users:
+#   - user: "alice"
+#     config:
+#       - host: "git.example.com"
+#         hostname: "git.example.com"
+#         identity_file: "~/.ssh/id_ed25519_git"
+#         user: "git"
+#         forward_agent: false
+#       - host: "prod-*"
+#         proxy_jump: "bastion.example.com"
+#         identity_file: "~/.ssh/id_ed25519_prod"
+#         strict_host_key_checking: true
+#         user_known_hosts_file: "~/.ssh/known_hosts_prod"

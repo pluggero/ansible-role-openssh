@@ -1,0 +1,21 @@
+---
+- name: Ensure we are using pacman
+  ansible.builtin.fail:
+    msg: "This role only supports {{ ansible_os_family }} systems that use pacman as a package manager."
+  when: ansible_pkg_mgr != "pacman"
+
+- name: Install OpenSSH via pacman
+  block:
+    - name: Update pacman cache
+      community.general.pacman:
+        update_cache: true
+      become: true
+
+    - name: Ensure OpenSSH is installed
+      community.general.pacman:
+        name: "{{ package }}"
+        state: present
+      loop: "{{ openssh_distro_pkgs }}"
+      loop_control:
+        loop_var: package
+      become: true

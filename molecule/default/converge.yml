@@ -1,0 +1,25 @@
+---
+- name: Converge
+  hosts: all
+
+  vars_files:
+    - ../../vars/molecule_vars.yml
+
+  pre_tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_os_family == 'Debian'
+      become: true
+
+    - name: Create test user for SSH client config verification
+      ansible.builtin.user:
+        name: testuser
+        state: present
+        create_home: true
+        shell: /bin/bash
+      become: true
+
+  roles:
+    - role: pluggero.openssh

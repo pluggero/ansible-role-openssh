@@ -1,0 +1,64 @@
+---
+- name: Ensure SSH privilege separation directory exists
+  ansible.builtin.file:
+    path: /run/sshd
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+  when: openssh_server is defined
+
+- name: Configure OpenSSH Server
+  ansible.builtin.template:
+    src: sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/sbin/sshd -t -f %s
+    backup: true
+  become: true
+  notify: Reload sshd
+  when: openssh_server is defined
+
+- name: Configure openssh Client (system-wide)
+  ansible.builtin.template:
+    src: openssh_config_system.j2
+    dest: /etc/ssh/ssh_config
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  become: true
+  when: openssh_client_system is defined
+
+- name: Configure OpenSSH Client (per-user)
+  when: openssh_client_users is defined and openssh_client_users | length > 0
+  block:
+    - name: Ensure .ssh directory exists for users
+      ansible.builtin.file:
+        path: "/home/{{ item.user }}/.ssh"
+        state: directory
+        owner: "{{ item.user }}"
+        group: "{{ item.user }}"
+        mode: "0700"
+      loop: "{{ openssh_client_users }}"
+      loop_control:
+        label: "{{ item.user }}"
+      become: true
+
+    - name: Deploy per-user OpenSSH client config
+      ansible.builtin.template:
+        src: openssh_config_user.j2
+        dest: "/home/{{ item.user }}/.ssh/config"
+        owner: "{{ item.user }}"
+        group: "{{ item.user }}"
+        mode: "0600"
+        backup: true
+      loop: "{{ openssh_client_users }}"
+      loop_control:
+        label: "{{ item.user }}"
+      vars:
+        openssh_user_config: "{{ item }}"
+      become: true

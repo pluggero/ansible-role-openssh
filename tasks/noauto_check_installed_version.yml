@@ -1,0 +1,18 @@
+---
+- name: Check installed OpenSSH version
+  block:
+    - name: Get installed OpenSSH version
+      ansible.builtin.command:
+        cmd: "ssh -V"
+      ignore_errors: true
+      changed_when: false
+      failed_when: false
+      register: openssh_installed_version_cmd
+
+    - name: Extract only the version into a variable
+      ansible.builtin.set_fact:
+        openssh_installed_version: "{{ (openssh_installed_version_cmd.stderr | regex_search('.*?([\\d\\.]{2,})', '\\1'))[0] | default('') | regex_replace('\\.$', '') }}"
+
+    - name: Debug installed OpenSSH version
+      ansible.builtin.debug:
+        var: openssh_installed_version

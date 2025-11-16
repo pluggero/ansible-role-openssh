@@ -1,0 +1,6 @@
+---
+openssh_distro_pkgs:
+  - openssh-client
+  - openssh-server
+
+openssh_service_name: ssh

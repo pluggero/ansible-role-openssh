@@ -1,0 +1,22 @@
+---
+- name: Ensure we are using apt
+  ansible.builtin.fail:
+    msg: "This role only supports {{ ansible_os_family }} systems that use apt as a package manager."
+  when: ansible_pkg_mgr != "apt"
+
+- name: Uninstall OpenSSH in apt
+  block:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      become: true
+
+    - name: Remove OpenSSH if it is installed
+      ansible.builtin.apt:
+        name: "{{ package }}"
+        state: absent
+      loop: "{{ openssh_distro_pkgs }}"
+      loop_control:
+        loop_var: package
+      become: true

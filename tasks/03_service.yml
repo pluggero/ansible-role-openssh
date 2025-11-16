@@ -1,0 +1,10 @@
+---
+- name: Manage sshd service
+  when: openssh_server is defined
+  block:
+    - name: Ensure sshd service is managed
+      ansible.builtin.service:
+        name: "{{ openssh_service_name }}"
+        state: "{{ 'started' if openssh_service_enabled else 'stopped' }}"
+        enabled: "{{ openssh_service_enabled }}"
+      become: true
