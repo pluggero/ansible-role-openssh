@@ -75,7 +75,7 @@
         "box_version:\\s+\"\\$\\{MOLECULE_VAGRANT_BOX_VERSION:-(?<currentValue>[\\d\\.]+)\\}\""
       ],
       "datasourceTemplate": "github-tags",
-      "depNameTemplate": "pluggero/packer-debian12-ansible",
+      "depNameTemplate": "pluggero/vagrant-debian12-ansible",
       "versioningTemplate": "semver"
     },
     {
@@ -87,7 +87,7 @@
         "vagrant_box:\\s+archlinux\\s+vagrant_box_version:\\s+\"(?<currentValue>[\\d\\.]+)\""
       ],
       "datasourceTemplate": "github-tags",
-      "depNameTemplate": "pluggero/packer-archlinux-ansible",
+      "depNameTemplate": "pluggero/vagrant-archlinux-ansible",
       "versioningTemplate": "semver"
     }
   ],
