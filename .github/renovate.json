@@ -23,6 +23,12 @@
       ],
       "automerge": true,
       "automergeType": "pr"
+    },
+    {
+      "matchManagers": ["custom.regex"],
+      "matchDepNames": ["/^pluggero\\/vagrant-.*-ansible$/"],
+      "automerge": true,
+      "automergeType": "pr"
     }
   ],
   "enabledManagers": [
