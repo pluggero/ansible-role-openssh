@@ -1,6 +1,11 @@
 ---
 openssh_service_enabled: true
 
+# Override specific openssh_server settings for molecule testing
+openssh_server_molecule_overrides:
+  banner: "/etc/ssh/test_banner.txt"
+  print_motd: true
+
 openssh_client_users:
   - user: testuser
     config:

@@ -6,6 +6,11 @@
     - ../../vars/molecule_vars.yml
 
   pre_tasks:
+    - name: Merge openssh_server overrides with defaults
+      ansible.builtin.set_fact:
+        openssh_server: "{{ openssh_server | default({}) | combine(openssh_server_molecule_overrides | default({}), recursive=true) }}"
+      when: openssh_server_molecule_overrides is defined
+
     - name: Update apt cache
       ansible.builtin.apt:
         update_cache: true
@@ -19,6 +24,50 @@
         state: present
         create_home: true
         shell: /bin/bash
+      become: true
+
+    - name: Create test banner file
+      ansible.builtin.copy:
+        content: |
+          **************************************************************************
+          *                           AUTHORIZED ACCESS ONLY                       *
+          *                                                                        *
+          *  This system is for authorized use only. All activity is monitored     *
+          *  and logged. Unauthorized access is prohibited and will be             *
+          *  prosecuted to the fullest extent of the law.                          *
+          *                                                                        *
+          *  By continuing, you consent to your activity being monitored.          *
+          **************************************************************************
+        dest: /etc/ssh/test_banner.txt
+        mode: "0644"
+        owner: root
+        group: root
+      become: true
+
+    - name: Create test MOTD file
+      ansible.builtin.copy:
+        content: |
+          ================================================================================
+
+                        Welcome to the OpenSSH Test Server
+
+          ================================================================================
+
+          System Information:
+          - This is a test environment managed by Ansible
+          - All connections are monitored and logged
+          - For support, contact your system administrator
+
+          Recent Updates:
+          - OpenSSH server configured with security hardening
+          - Pre-authentication banner enabled
+          - Message of the Day (MOTD) enabled
+
+          ================================================================================
+        dest: /etc/motd
+        mode: "0644"
+        owner: root
+        group: root
       become: true
 
   roles:
