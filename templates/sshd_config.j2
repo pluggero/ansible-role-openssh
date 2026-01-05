@@ -27,14 +27,66 @@ MACs {{ openssh_server.macs | join(',') }}
 {% endif %}
 
 # Logging
-SyslogFacility AUTH
-LogLevel INFO
+SyslogFacility {{ openssh_server.syslog_facility | default('AUTH') }}
+LogLevel {{ openssh_server.log_level | default('INFO') }}
+
+# Brute Force Protection
+{% if openssh_server.max_auth_tries is defined %}
+MaxAuthTries {{ openssh_server.max_auth_tries }}
+{% endif %}
+{% if openssh_server.max_sessions is defined %}
+MaxSessions {{ openssh_server.max_sessions }}
+{% endif %}
+{% if openssh_server.max_startups is defined %}
+MaxStartups {{ openssh_server.max_startups }}
+{% endif %}
+{% if openssh_server.login_grace_time is defined %}
+LoginGraceTime {{ openssh_server.login_grace_time }}
+{% endif %}
+{% if (openssh_server.allow_users is defined and openssh_server.allow_users | length > 0) or (openssh_server.allow_groups is defined and openssh_server.allow_groups | length > 0) %}
+
+# Access Control
+{% if openssh_server.allow_users is defined and openssh_server.allow_users | length > 0 %}
+AllowUsers {{ openssh_server.allow_users | join(' ') }}
+{% endif %}
+{% if openssh_server.allow_groups is defined and openssh_server.allow_groups | length > 0 %}
+AllowGroups {{ openssh_server.allow_groups | join(' ') }}
+{% endif %}
+{% endif %}
 
 # Additional security settings
-PermitEmptyPasswords no
-ChallengeResponseAuthentication no
-UsePAM yes
-X11Forwarding yes
-PrintMotd no
-AcceptEnv LANG LC_*
-Subsystem sftp /usr/lib/openssh/sftp-server
+PermitEmptyPasswords {{ 'yes' if openssh_server.permit_empty_passwords | default(false) else 'no' }}
+ChallengeResponseAuthentication {{ 'yes' if openssh_server.challenge_response_authentication | default(false) else 'no' }}
+UsePAM {{ 'yes' if openssh_server.use_pam | default(true) else 'no' }}
+PrintMotd {{ 'yes' if openssh_server.print_motd | default(false) else 'no' }}
+{% if openssh_server.accept_env is defined and openssh_server.accept_env | length > 0 %}
+AcceptEnv {{ openssh_server.accept_env | join(' ') }}
+{% endif %}
+
+# Banner Configuration
+{% if ansible_os_family == 'Debian' %}
+DebianBanner {{ 'yes' if openssh_server.debian_banner | default(false) else 'no' }}
+{% endif %}
+{% if openssh_server.banner is defined %}
+Banner {{ openssh_server.banner }}
+{% endif %}
+
+# Forwarding and Tunneling
+X11Forwarding {{ 'yes' if openssh_server.x11_forwarding | default(false) else 'no' }}
+{% if openssh_server.allow_tcp_forwarding is defined %}
+AllowTcpForwarding {{ 'yes' if openssh_server.allow_tcp_forwarding else 'no' }}
+{% endif %}
+{% if openssh_server.allow_agent_forwarding is defined %}
+AllowAgentForwarding {{ 'yes' if openssh_server.allow_agent_forwarding else 'no' }}
+{% endif %}
+{% if openssh_server.gateway_ports is defined %}
+GatewayPorts {{ 'yes' if openssh_server.gateway_ports else 'no' }}
+{% endif %}
+{% if openssh_server.permit_tunnel is defined %}
+PermitTunnel {{ 'yes' if openssh_server.permit_tunnel else 'no' }}
+{% endif %}
+
+# Subsystems
+{% if openssh_server.subsystem_sftp is defined %}
+Subsystem sftp {{ openssh_server.subsystem_sftp }}
+{% endif %}

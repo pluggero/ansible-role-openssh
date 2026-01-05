@@ -65,9 +65,9 @@
     - name: Assert Port configuration
       ansible.builtin.assert:
         that:
-          - sshd_config_lines | select('match', '^Port 22$') | list | length > 0
-        fail_msg: "Port 22 not configured in sshd_config"
-        success_msg: "Port 22 is configured"
+          - sshd_config_lines | select('match', '^Port 2222$') | list | length > 0
+        fail_msg: "Port 2222 not configured in sshd_config"
+        success_msg: "Port 2222 is configured"
 
     - name: Assert ListenAddress configuration
       ansible.builtin.assert:
@@ -160,6 +160,188 @@
           - sshd_effective_config.stdout == 'permitrootlogin no'
         fail_msg: "PermitRootLogin is not set to 'no' in effective sshd configuration. Got: {{ sshd_effective_config.stdout }}"
         success_msg: "PermitRootLogin is set to 'no' in effective sshd configuration"
+
+    # ========================================
+    # Logging Configuration Verification
+    # ========================================
+    - name: Assert SyslogFacility is configured
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^SyslogFacility AUTH$') | list | length > 0
+        fail_msg: "SyslogFacility not set to 'AUTH'"
+        success_msg: "SyslogFacility is configured correctly"
+
+    - name: Assert LogLevel is configured
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^LogLevel INFO$') | list | length > 0
+        fail_msg: "LogLevel not set to 'INFO'"
+        success_msg: "LogLevel is configured correctly"
+
+    # ========================================
+    # Brute Force Protection Verification
+    # ========================================
+    - name: Assert MaxAuthTries is configured
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^MaxAuthTries 2$') | list | length > 0
+        fail_msg: "MaxAuthTries not set to '2'"
+        success_msg: "MaxAuthTries is configured correctly"
+
+    - name: Assert MaxSessions is configured
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^MaxSessions 10$') | list | length > 0
+        fail_msg: "MaxSessions not set to '10'"
+        success_msg: "MaxSessions is configured correctly"
+
+    - name: Assert MaxStartups is configured
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^MaxStartups 5:30:50$') | list | length > 0
+        fail_msg: "MaxStartups not set to '5:30:50'"
+        success_msg: "MaxStartups is configured correctly"
+
+    - name: Assert LoginGraceTime is configured
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^LoginGraceTime 20$') | list | length > 0
+        fail_msg: "LoginGraceTime not set to '20'"
+        success_msg: "LoginGraceTime is configured correctly"
+
+    # ========================================
+    # Additional Security Settings Verification
+    # ========================================
+    - name: Assert PermitEmptyPasswords is disabled
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^PermitEmptyPasswords no$') | list | length > 0
+        fail_msg: "PermitEmptyPasswords is not set to 'no'"
+        success_msg: "PermitEmptyPasswords is disabled"
+
+    - name: Assert ChallengeResponseAuthentication is disabled
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^ChallengeResponseAuthentication no$') | list | length > 0
+        fail_msg: "ChallengeResponseAuthentication is not set to 'no'"
+        success_msg: "ChallengeResponseAuthentication is disabled"
+
+    - name: Assert UsePAM is enabled
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^UsePAM yes$') | list | length > 0
+        fail_msg: "UsePAM is not set to 'yes'"
+        success_msg: "UsePAM is enabled"
+
+    - name: Assert PrintMotd is enabled
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^PrintMotd yes$') | list | length > 0
+        fail_msg: "PrintMotd is not set to 'yes'"
+        success_msg: "PrintMotd is enabled"
+
+    - name: Check if MOTD file exists
+      ansible.builtin.stat:
+        path: /etc/motd
+      register: motd_file_stat
+
+    - name: Assert MOTD file exists
+      ansible.builtin.assert:
+        that:
+          - motd_file_stat.stat.exists
+          - motd_file_stat.stat.isreg
+          - motd_file_stat.stat.mode == '0644'
+        fail_msg: "MOTD file does not exist or has incorrect permissions"
+        success_msg: "MOTD file exists with correct permissions"
+
+    - name: Assert AcceptEnv is configured
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^AcceptEnv LANG LC_\*$') | list | length > 0
+        fail_msg: "AcceptEnv not configured correctly"
+        success_msg: "AcceptEnv is configured"
+
+    # ========================================
+    # Banner Configuration Verification
+    # ========================================
+    - name: Assert DebianBanner is disabled (Debian only)
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^DebianBanner no$') | list | length > 0
+        fail_msg: "DebianBanner is not set to 'no'"
+        success_msg: "DebianBanner is disabled"
+      when: ansible_os_family == 'Debian'
+
+    - name: Assert Banner is configured with test banner
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^Banner /etc/ssh/test_banner.txt$') | list | length > 0
+        fail_msg: "Banner is not configured correctly"
+        success_msg: "Banner is configured with test banner file"
+
+    - name: Check if banner file exists
+      ansible.builtin.stat:
+        path: /etc/ssh/test_banner.txt
+      register: banner_file_stat
+
+    - name: Assert banner file exists
+      ansible.builtin.assert:
+        that:
+          - banner_file_stat.stat.exists
+          - banner_file_stat.stat.isreg
+          - banner_file_stat.stat.mode == '0644'
+        fail_msg: "Banner file does not exist or has incorrect permissions"
+        success_msg: "Banner file exists with correct permissions"
+
+    # ========================================
+    # Forwarding and Tunneling Verification
+    # ========================================
+    - name: Assert X11Forwarding is disabled
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^X11Forwarding no$') | list | length > 0
+        fail_msg: "X11Forwarding is not set to 'no'"
+        success_msg: "X11Forwarding is disabled"
+
+    - name: Assert AllowTcpForwarding is disabled
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^AllowTcpForwarding no$') | list | length > 0
+        fail_msg: "AllowTcpForwarding is not set to 'no'"
+        success_msg: "AllowTcpForwarding is disabled"
+
+    - name: Assert AllowAgentForwarding is disabled
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^AllowAgentForwarding no$') | list | length > 0
+        fail_msg: "AllowAgentForwarding is not set to 'no'"
+        success_msg: "AllowAgentForwarding is disabled"
+
+    - name: Assert GatewayPorts is disabled
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^GatewayPorts no$') | list | length > 0
+        fail_msg: "GatewayPorts is not set to 'no'"
+        success_msg: "GatewayPorts is disabled"
+
+    - name: Assert PermitTunnel is disabled
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^PermitTunnel no$') | list | length > 0
+        fail_msg: "PermitTunnel is not set to 'no'"
+        success_msg: "PermitTunnel is disabled"
+
+    # ========================================
+    # Subsystems Verification
+    # ========================================
+    - name: Assert Subsystem sftp is configured
+      ansible.builtin.assert:
+        that:
+          - sshd_config_lines | select('match', '^Subsystem sftp ' + expected_sftp_path + '$') | list | length > 0
+        fail_msg: "Subsystem sftp is not configured correctly"
+        success_msg: "Subsystem sftp is configured"
+      vars:
+        expected_sftp_path: "{{ '/usr/lib/openssh/sftp-server' if ansible_os_family == 'Debian' else '/usr/lib/ssh/sftp-server' }}"
 
     # ========================================
     # SSH Client Configuration Verification (System)
@@ -291,9 +473,9 @@
     # ========================================
     # Connectivity Verification
     # ========================================
-    - name: Wait for SSH port 22 to be available
+    - name: Wait for SSH port 2222 to be available
       ansible.builtin.wait_for:
-        port: 22
+        port: 2222
         host: 0.0.0.0
         timeout: 10
       register: port_check
@@ -302,8 +484,8 @@
       ansible.builtin.assert:
         that:
           - port_check is succeeded
-        fail_msg: "SSH is not listening on port 22"
-        success_msg: "SSH is listening on port 22"
+        fail_msg: "SSH is not listening on port 2222"
+        success_msg: "SSH is listening on port 2222"
 
     # ========================================
     # Security Verification Tests
