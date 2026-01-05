@@ -12,6 +12,14 @@
       loop_control:
         loop_var: var_file
 
+    - name: Set SFTP subsystem default if not defined
+      ansible.builtin.set_fact:
+        openssh_server: "{{ openssh_server | combine({'subsystem_sftp': openssh_sftp_subsystem_default}, recursive=true) }}"
+      when:
+        - openssh_sftp_subsystem_default is defined
+        - openssh_server is defined
+        - openssh_server.subsystem_sftp is not defined
+
     - name: Install openssh
       ansible.builtin.include_tasks:
         file: noauto_install_{{ openssh_install_method }}.yml

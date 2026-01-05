@@ -50,7 +50,8 @@ openssh_server:
   debian_banner: false
   # banner: "/etc/ssh/banner.txt"  # Uncomment and set path to enable
   # Subsystems
-  subsystem_sftp: "/usr/lib/openssh/sftp-server"
+  # subsystem_sftp is set automatically based on distribution
+  # Override this value if you need a custom SFTP subsystem path
 
 # OpenSSH Client System-wide Configuration
 openssh_client_system:

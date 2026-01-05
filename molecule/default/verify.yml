@@ -264,12 +264,13 @@
     # ========================================
     # Banner Configuration Verification
     # ========================================
-    - name: Assert DebianBanner is disabled
+    - name: Assert DebianBanner is disabled (Debian only)
       ansible.builtin.assert:
         that:
           - sshd_config_lines | select('match', '^DebianBanner no$') | list | length > 0
         fail_msg: "DebianBanner is not set to 'no'"
         success_msg: "DebianBanner is disabled"
+      when: ansible_os_family == 'Debian'
 
     - name: Assert Banner is configured with test banner
       ansible.builtin.assert:
@@ -336,9 +337,11 @@
     - name: Assert Subsystem sftp is configured
       ansible.builtin.assert:
         that:
-          - sshd_config_lines | select('match', '^Subsystem sftp /usr/lib/openssh/sftp-server$') | list | length > 0
+          - sshd_config_lines | select('match', '^Subsystem sftp ' + expected_sftp_path + '$') | list | length > 0
         fail_msg: "Subsystem sftp is not configured correctly"
         success_msg: "Subsystem sftp is configured"
+      vars:
+        expected_sftp_path: "{{ '/usr/lib/openssh/sftp-server' if ansible_os_family == 'Debian' else '/usr/lib/ssh/sftp-server' }}"
 
     # ========================================
     # SSH Client Configuration Verification (System)

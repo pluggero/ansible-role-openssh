@@ -4,3 +4,5 @@ openssh_distro_pkgs:
   - openssh-server
 
 openssh_service_name: ssh
+
+openssh_sftp_subsystem_default: "/usr/lib/openssh/sftp-server"

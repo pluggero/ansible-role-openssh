@@ -64,7 +64,9 @@ AcceptEnv {{ openssh_server.accept_env | join(' ') }}
 {% endif %}
 
 # Banner Configuration
+{% if ansible_os_family == 'Debian' %}
 DebianBanner {{ 'yes' if openssh_server.debian_banner | default(false) else 'no' }}
+{% endif %}
 {% if openssh_server.banner is defined %}
 Banner {{ openssh_server.banner }}
 {% endif %}
