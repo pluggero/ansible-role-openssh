@@ -473,9 +473,9 @@
     # ========================================
     # Connectivity Verification
     # ========================================
-    - name: Wait for SSH port 22 to be available
+    - name: Wait for SSH port 2222 to be available
       ansible.builtin.wait_for:
-        port: 22
+        port: 2222
         host: 0.0.0.0
         timeout: 10
       register: port_check
@@ -484,8 +484,8 @@
       ansible.builtin.assert:
         that:
           - port_check is succeeded
-        fail_msg: "SSH is not listening on port 22"
-        success_msg: "SSH is listening on port 22"
+        fail_msg: "SSH is not listening on port 2222"
+        success_msg: "SSH is listening on port 2222"
 
     # ========================================
     # Security Verification Tests
