@@ -67,10 +67,12 @@ openssh_client_users: []
 #       - host: "git.example.com"
 #         hostname: "git.example.com"
 #         identity_file: "~/.ssh/id_ed25519_git"
+#         identities_only: true
 #         user: "git"
 #         forward_agent: false
 #       - host: "prod-*"
 #         proxy_jump: "bastion.example.com"
 #         identity_file: "~/.ssh/id_ed25519_prod"
+#         identities_only: true
 #         strict_host_key_checking: true
 #         user_known_hosts_file: "~/.ssh/known_hosts_prod"

@@ -12,6 +12,9 @@ Host {{ host_config.host }}
 {% if host_config.identity_file is defined %}
     IdentityFile {{ host_config.identity_file }}
 {% endif %}
+{% if host_config.identities_only is defined %}
+    IdentitiesOnly {{ 'yes' if host_config.identities_only else 'no' }}
+{% endif %}
 {% if host_config.forward_agent is defined %}
     ForwardAgent {{ 'yes' if host_config.forward_agent else 'no' }}
 {% endif %}
