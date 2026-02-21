@@ -36,10 +36,8 @@ jobs:
           yamllint .
 
       - name: Run ansible-lint
-        uses: ansible/ansible-lint@7f6abc5ef97d0fb043a0f3d416dfbc74399fbda0 # v26.1.1
-        with:
-          working_directory: "pluggero.openssh"
-          requirements_file: "requirements.yml"
+        run: |
+          ansible-lint .
 
   molecule:
     name: Molecule
@@ -49,9 +47,9 @@ jobs:
       matrix:
         include:
           - vagrant_box: debian12
-            vagrant_box_version: "2025.12.28"
+            vagrant_box_version: "2026.02.15"
           - vagrant_box: archlinux
-            vagrant_box_version: "2025.12.21"
+            vagrant_box_version: "2026.02.15"
     env:
       VBOX_VERSION: "7.1.12"
       VBOX_DEB_DISTRO: "Ubuntu"

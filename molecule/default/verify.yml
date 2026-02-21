@@ -2,9 +2,11 @@
 - name: Verify
   hosts: all
   gather_facts: true
-  become: true
 
   vars:
+    ansible_user: ansible
+    ansible_password: ansible
+    ansible_become_password: ansible
     openssh_expected_packages:
       Debian:
         - openssh-client
@@ -130,10 +132,11 @@
         success_msg: "MACs configured with secure algorithms"
 
     - name: Validate sshd configuration syntax
-      ansible.builtin.command: sshd -t
+      ansible.builtin.command: /usr/sbin/sshd -t
       register: sshd_test
       changed_when: false
       failed_when: sshd_test.rc != 0
+      become: true
 
     - name: Assert sshd configuration is valid
       ansible.builtin.assert:
@@ -143,12 +146,13 @@
         success_msg: "sshd configuration is valid"
 
     - name: Get effective sshd configuration for PermitRootLogin
-      ansible.builtin.shell: set -o pipefail && sshd -T | grep -i "^permitrootlogin"
+      ansible.builtin.shell: set -o pipefail && /usr/sbin/sshd -T | grep -i "^permitrootlogin"
       args:
         executable: /bin/bash
       register: sshd_effective_config
       changed_when: false
       failed_when: false
+      become: true
 
     - name: Debug var
       ansible.builtin.debug:
@@ -399,6 +403,7 @@
       ansible.builtin.stat:
         path: /home/testuser/.ssh
       register: testuser_ssh_dir
+      become: true
 
     - name: Assert testuser .ssh directory exists with correct permissions
       ansible.builtin.assert:
@@ -414,6 +419,7 @@
       ansible.builtin.stat:
         path: /home/testuser/.ssh/config
       register: testuser_ssh_config
+      become: true
 
     - name: Assert testuser .ssh/config exists with correct permissions
       ansible.builtin.assert:
@@ -429,6 +435,7 @@
       ansible.builtin.slurp:
         src: /home/testuser/.ssh/config
       register: testuser_config_content
+      become: true
 
     - name: Assert testuser config contains example.com host configuration
       ansible.builtin.assert:

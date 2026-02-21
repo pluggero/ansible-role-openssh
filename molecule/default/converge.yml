@@ -5,6 +5,11 @@
   vars_files:
     - ../../vars/molecule_vars.yml
 
+  vars:
+    ansible_user: ansible
+    ansible_password: ansible
+    ansible_become_password: ansible
+
   pre_tasks:
     - name: Merge openssh_server overrides with defaults
       ansible.builtin.set_fact:

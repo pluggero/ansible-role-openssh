@@ -25,8 +25,12 @@
       "automergeType": "pr"
     },
     {
-      "matchManagers": ["custom.regex"],
-      "matchDepNames": ["/^pluggero\\/vagrant-.*-ansible$/"],
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchDepNames": [
+        "/^pluggero\\/vagrant-.*-ansible$/"
+      ],
       "automerge": true,
       "automergeType": "pr"
     }
@@ -82,7 +86,7 @@
       ],
       "datasourceTemplate": "github-tags",
       "depNameTemplate": "pluggero/vagrant-debian12-ansible",
-      "versioningTemplate": "semver"
+      "versioningTemplate": "loose"
     },
     {
       "customType": "regex",
@@ -94,7 +98,7 @@
       ],
       "datasourceTemplate": "github-tags",
       "depNameTemplate": "pluggero/vagrant-archlinux-ansible",
-      "versioningTemplate": "semver"
+      "versioningTemplate": "loose"
     }
   ],
   "customDatasources": {
