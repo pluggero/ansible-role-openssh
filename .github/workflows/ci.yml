@@ -49,7 +49,7 @@ jobs:
           - vagrant_box: debian12
             vagrant_box_version: "2026.02.15"
           - vagrant_box: archlinux
-            vagrant_box_version: "2026.02.15"
+            vagrant_box_version: "2026.02.22"
     env:
       VBOX_VERSION: "7.1.12"
       VBOX_DEB_DISTRO: "Ubuntu"
