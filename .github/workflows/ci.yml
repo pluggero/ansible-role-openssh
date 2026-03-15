@@ -47,7 +47,7 @@ jobs:
       matrix:
         include:
           - vagrant_box: debian12
-            vagrant_box_version: "2026.03.08"
+            vagrant_box_version: "2026.03.15"
           - vagrant_box: archlinux
             vagrant_box_version: "2026.03.15"
     env:
