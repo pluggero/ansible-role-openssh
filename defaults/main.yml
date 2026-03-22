@@ -54,9 +54,23 @@ openssh_server:
   # Override this value if you need a custom SFTP subsystem path
 
 # OpenSSH Client System-wide Configuration
+# All options apply to the global "Host *" block in /etc/ssh/ssh_config
 openssh_client_system:
-  send_env: ["LANG", "LC_*"]
-  forward_agent: false
+  # Authentication and Security
+  forward_agent: false              # Enable SSH agent forwarding
+  hash_known_hosts: true            # Hash hostnames in known_hosts file
+  add_keys_to_agent: false          # Automatically add keys to ssh-agent
+
+  # Connection Settings
+  server_alive_interval: 60         # Send keepalive every 60 seconds
+  server_alive_count_max: 3         # Disconnect after 3 failed keepalives
+
+  # Advanced Options
+  compression: false                # Disable compression
+  update_host_keys: true            # Automatically update known_hosts with new keys
+
+  # Environment Variables
+  send_env: ["LANG", "LC_*"]        # Environment variables to send to server
 
 openssh_client_users: []
 # OpenSSH Client Per-User Configuration
