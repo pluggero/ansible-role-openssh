@@ -437,12 +437,158 @@
       register: testuser_config_content
       become: true
 
-    - name: Assert testuser config contains example.com host configuration
+    - name: Set testuser config lines as fact
+      ansible.builtin.set_fact:
+        testuser_config_lines: "{{ (testuser_config_content.content | b64decode).split('\n') }}"
+
+    # ========================================
+    # First Host Entry: git.example.com
+    # Tests: host, hostname, identity_file, identities_only, user, forward_agent, port
+    # ========================================
+    - name: Assert git.example.com host block exists
       ansible.builtin.assert:
         that:
-          - "'example.com' in (testuser_config_content.content | b64decode)"
-        fail_msg: "testuser .ssh/config does not contain expected host configuration"
-        success_msg: "testuser .ssh/config contains host configuration"
+          - testuser_config_lines | select('match', '^Host git\\.example\\.com$') | list | length > 0
+        fail_msg: "Host git.example.com not found in config"
+        success_msg: "Host git.example.com found in config"
+
+    - name: Assert git.example.com hostname is configured
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^\s+HostName git\\.example\\.com$') | list | length > 0
+        fail_msg: "HostName git.example.com not configured"
+        success_msg: "HostName git.example.com configured correctly"
+
+    - name: Assert git.example.com identity_file is configured
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^\s+IdentityFile ~/\\.ssh/id_ed25519_git$') | list | length > 0
+        fail_msg: "IdentityFile for git.example.com not configured"
+        success_msg: "IdentityFile for git.example.com configured correctly"
+
+    - name: Assert git.example.com identities_only is set to yes
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^\s+IdentitiesOnly yes$') | list | length > 0
+        fail_msg: "IdentitiesOnly not set to yes for git.example.com"
+        success_msg: "IdentitiesOnly set to yes for git.example.com"
+
+    - name: Assert git.example.com user is configured
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^\s+User git$') | list | length > 0
+        fail_msg: "User git not configured for git.example.com"
+        success_msg: "User git configured for git.example.com"
+
+    - name: Assert git.example.com forward_agent is set to no
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^\s+ForwardAgent no$') | list | length > 0
+        fail_msg: "ForwardAgent not set to no for git.example.com"
+        success_msg: "ForwardAgent set to no for git.example.com"
+
+    - name: Assert git.example.com port is configured
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^\s+Port 22$') | list | length > 0
+        fail_msg: "Port 22 not configured for git.example.com"
+        success_msg: "Port 22 configured for git.example.com"
+
+    # ========================================
+    # Second Host Entry: prod-*
+    # Tests: host (wildcard), proxy_jump, identity_file, identities_only,
+    #        strict_host_key_checking, user_known_hosts_file
+    # ========================================
+    - name: Assert prod-* host block exists
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^Host prod-\\*$') | list | length > 0
+        fail_msg: "Host prod-* not found in config"
+        success_msg: "Host prod-* found in config"
+
+    - name: Assert prod-* proxy_jump is configured
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^\s+ProxyJump bastion\\.example\\.com$') | list | length > 0
+        fail_msg: "ProxyJump not configured for prod-*"
+        success_msg: "ProxyJump configured correctly for prod-*"
+
+    - name: Assert prod-* identity_file is configured
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^\s+IdentityFile ~/\\.ssh/id_ed25519_prod$') | list | length > 0
+        fail_msg: "IdentityFile for prod-* not configured"
+        success_msg: "IdentityFile for prod-* configured correctly"
+
+    - name: Assert prod-* identities_only is set to yes
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^\s+IdentitiesOnly yes$') | list | length > 0
+        fail_msg: "IdentitiesOnly not set to yes for prod-*"
+        success_msg: "IdentitiesOnly set to yes for prod-*"
+
+    - name: Assert prod-* strict_host_key_checking is set to yes
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^\s+StrictHostKeyChecking yes$') | list | length > 0
+        fail_msg: "StrictHostKeyChecking not set to yes for prod-*"
+        success_msg: "StrictHostKeyChecking set to yes for prod-*"
+
+    - name: Assert prod-* user_known_hosts_file is configured
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^\s+UserKnownHostsFile ~/\\.ssh/known_hosts_prod$') | list | length > 0
+        fail_msg: "UserKnownHostsFile not configured for prod-*"
+        success_msg: "UserKnownHostsFile configured correctly for prod-*"
+
+    # ========================================
+    # Third Host Entry: dev-server
+    # Tests: forward_agent (true), strict_host_key_checking (false)
+    # ========================================
+    - name: Assert dev-server host block exists
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^Host dev-server$') | list | length > 0
+        fail_msg: "Host dev-server not found in config"
+        success_msg: "Host dev-server found in config"
+
+    - name: Assert dev-server hostname is configured
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^\s+HostName dev\\.example\\.com$') | list | length > 0
+        fail_msg: "HostName dev.example.com not configured"
+        success_msg: "HostName dev.example.com configured correctly"
+
+    - name: Assert dev-server forward_agent is set to yes
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^\s+ForwardAgent yes$') | list | length > 0
+        fail_msg: "ForwardAgent not set to yes for dev-server"
+        success_msg: "ForwardAgent set to yes for dev-server"
+
+    - name: Assert dev-server strict_host_key_checking is set to no
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^\s+StrictHostKeyChecking no$') | list | length > 0
+        fail_msg: "StrictHostKeyChecking not set to no for dev-server"
+        success_msg: "StrictHostKeyChecking set to no for dev-server"
+
+    # ========================================
+    # Overall Configuration Validation
+    # ========================================
+    - name: Assert ansible_managed comment exists in config
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^# Ansible managed') | list | length > 0
+        fail_msg: "Ansible managed comment not found in config"
+        success_msg: "Ansible managed comment found in config"
+
+    - name: Assert user comment exists in config
+      ansible.builtin.assert:
+        that:
+          - testuser_config_lines | select('match', '^# User OpenSSH Client Configuration for testuser$') | list | length > 0
+        fail_msg: "User configuration comment not found"
+        success_msg: "User configuration comment found"
 
     # ========================================
     # Privilege Separation Directory Verification
