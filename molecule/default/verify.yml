@@ -375,26 +375,68 @@
       ansible.builtin.set_fact:
         ssh_config_lines: "{{ (ssh_config_content.content | b64decode).split('\n') }}"
 
+    - name: Assert Host * block exists
+      ansible.builtin.assert:
+        that:
+          - ssh_config_lines | select('match', '^Host \\*$') | list | length > 0
+        fail_msg: "Host * block not found in ssh_config"
+        success_msg: "Host * block found in ssh_config"
+
     - name: Assert SendEnv is configured
       ansible.builtin.assert:
         that:
-          - ssh_config_lines | select('match', '^\s*SendEnv LANG LC_\*$') | list | length > 0
+          - ssh_config_lines | select('match', '^\s+SendEnv LANG LC_\*$') | list | length > 0
         fail_msg: "SendEnv not configured in ssh_config"
         success_msg: "SendEnv is configured"
 
     - name: Assert ForwardAgent is disabled
       ansible.builtin.assert:
         that:
-          - ssh_config_lines | select('match', '^\s*ForwardAgent no$') | list | length > 0
+          - ssh_config_lines | select('match', '^\s+ForwardAgent no$') | list | length > 0
         fail_msg: "ForwardAgent is not disabled"
         success_msg: "ForwardAgent is disabled"
 
     - name: Assert HashKnownHosts is enabled
       ansible.builtin.assert:
         that:
-          - ssh_config_lines | select('match', '^\s*HashKnownHosts yes$') | list | length > 0
+          - ssh_config_lines | select('match', '^\s+HashKnownHosts yes$') | list | length > 0
         fail_msg: "HashKnownHosts is not enabled"
         success_msg: "HashKnownHosts is enabled"
+
+    - name: Assert AddKeysToAgent is disabled
+      ansible.builtin.assert:
+        that:
+          - ssh_config_lines | select('match', '^\s+AddKeysToAgent no$') | list | length > 0
+        fail_msg: "AddKeysToAgent is not disabled"
+        success_msg: "AddKeysToAgent is disabled"
+
+    - name: Assert Compression is disabled
+      ansible.builtin.assert:
+        that:
+          - ssh_config_lines | select('match', '^\s+Compression no$') | list | length > 0
+        fail_msg: "Compression is not disabled"
+        success_msg: "Compression is disabled"
+
+    - name: Assert ServerAliveInterval is configured
+      ansible.builtin.assert:
+        that:
+          - ssh_config_lines | select('match', '^\s+ServerAliveInterval 60$') | list | length > 0
+        fail_msg: "ServerAliveInterval not set to 60"
+        success_msg: "ServerAliveInterval is configured"
+
+    - name: Assert ServerAliveCountMax is configured
+      ansible.builtin.assert:
+        that:
+          - ssh_config_lines | select('match', '^\s+ServerAliveCountMax 3$') | list | length > 0
+        fail_msg: "ServerAliveCountMax not set to 3"
+        success_msg: "ServerAliveCountMax is configured"
+
+    - name: Assert UpdateHostKeys is enabled
+      ansible.builtin.assert:
+        that:
+          - ssh_config_lines | select('match', '^\s+UpdateHostKeys yes$') | list | length > 0
+        fail_msg: "UpdateHostKeys is not enabled"
+        success_msg: "UpdateHostKeys is enabled"
 
     # ========================================
     # SSH Client Configuration Verification (Per-user)

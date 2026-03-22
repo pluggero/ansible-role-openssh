@@ -1,16 +1,29 @@
 # {{ ansible_managed }}
 # System-wide OpenSSH Client Configuration
 
-# Send environment variables
-{% if openssh_client_system.send_env is defined and openssh_client_system.send_env | length > 0 %}
-SendEnv {{ openssh_client_system.send_env | join(' ') }}
-{% endif %}
-
-# Security settings
-ForwardAgent {{ 'yes' if openssh_client_system.forward_agent else 'no' }}
-HashKnownHosts yes
-
-# Connection settings
+# Global settings for all hosts
 Host *
-    ServerAliveInterval 60
-    ServerAliveCountMax 3
+{% if openssh_client_system.send_env is defined and openssh_client_system.send_env | length > 0 %}
+    SendEnv {{ openssh_client_system.send_env | join(' ') }}
+{% endif %}
+{% if openssh_client_system.forward_agent is defined %}
+    ForwardAgent {{ 'yes' if openssh_client_system.forward_agent else 'no' }}
+{% endif %}
+{% if openssh_client_system.hash_known_hosts is defined %}
+    HashKnownHosts {{ 'yes' if openssh_client_system.hash_known_hosts else 'no' }}
+{% endif %}
+{% if openssh_client_system.add_keys_to_agent is defined %}
+    AddKeysToAgent {{ 'yes' if openssh_client_system.add_keys_to_agent else 'no' }}
+{% endif %}
+{% if openssh_client_system.compression is defined %}
+    Compression {{ 'yes' if openssh_client_system.compression else 'no' }}
+{% endif %}
+{% if openssh_client_system.server_alive_interval is defined %}
+    ServerAliveInterval {{ openssh_client_system.server_alive_interval }}
+{% endif %}
+{% if openssh_client_system.server_alive_count_max is defined %}
+    ServerAliveCountMax {{ openssh_client_system.server_alive_count_max }}
+{% endif %}
+{% if openssh_client_system.update_host_keys is defined %}
+    UpdateHostKeys {{ 'yes' if openssh_client_system.update_host_keys else 'no' }}
+{% endif %}
