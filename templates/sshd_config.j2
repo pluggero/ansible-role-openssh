@@ -15,6 +15,9 @@ PasswordAuthentication {{ 'yes' if openssh_server.password_authentication else '
 AuthenticationMethods {{ openssh_server.authentication_methods }}
 {% endif %}
 
+# Host Keys
+HostKey /etc/ssh/ssh_host_ed25519_key
+
 # Cryptography
 {% if openssh_server.kex is defined and openssh_server.kex | length > 0 %}
 KexAlgorithms {{ openssh_server.kex | join(',') }}
