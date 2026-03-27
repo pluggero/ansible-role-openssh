@@ -1,0 +1,113 @@
+---
+# Windows-specific OpenSSH configuration
+- name: Set path variables for Windows
+  ansible.builtin.set_fact:
+    openssh_config_dir: "{{ openssh_config_dir_windows }}"
+    openssh_binary_dir: "{{ openssh_binary_dir_windows }}"
+    openssh_host_key_dir: "{{ openssh_host_key_dir_windows }}"
+    openssh_user_home_pattern: "{{ openssh_user_home_pattern_windows }}"
+
+# Host key generation
+- name: Check if ed25519 host key exists
+  ansible.windows.win_stat:
+    path: "{{ openssh_host_key_dir }}\\ssh_host_ed25519_key"
+  register: openssh_ed25519_key_stat
+  when: openssh_server is defined
+
+- name: Generate SSH host key (ed25519) if not present
+  ansible.windows.win_shell: |
+    & "{{ openssh_binary_dir }}\ssh-keygen.exe" -t ed25519 -f "{{ openssh_host_key_dir }}\ssh_host_ed25519_key" -N '""'
+  when:
+    - openssh_server is defined
+    - not openssh_ed25519_key_stat.stat.exists | default(false)
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: SYSTEM
+
+# Set ACLs on config directory
+- name: Set ACLs on SSH config directory
+  ansible.windows.win_shell: |
+    icacls "{{ openssh_config_dir }}" /inheritance:r /grant:r "SYSTEM:(OI)(CI)F" /grant:r "Administrators:(OI)(CI)F"
+  when: openssh_server is defined
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: "{{ ansible_user }}"
+
+# Server configuration
+- name: Configure OpenSSH Server
+  ansible.windows.win_template:
+    src: sshd_config.j2
+    dest: "{{ openssh_config_dir }}\\sshd_config"
+    backup: true
+  notify: Reload sshd
+  when: openssh_server is defined
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: "{{ ansible_user }}"
+
+- name: Validate sshd_config
+  ansible.windows.win_shell: |
+    & "{{ openssh_binary_dir }}\sshd.exe" -t -f "{{ openssh_config_dir }}\sshd_config"
+  when: openssh_server is defined
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: "{{ ansible_user }}"
+
+# Set ACLs on sshd_config
+- name: Set ACLs on sshd_config
+  ansible.windows.win_shell: |
+    icacls "{{ openssh_config_dir }}\sshd_config" /inheritance:r /grant:r "SYSTEM:F" /grant:r "Administrators:F"
+  when: openssh_server is defined
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: "{{ ansible_user }}"
+
+# Client configuration (system-wide)
+- name: Configure openssh Client (system-wide)
+  ansible.windows.win_template:
+    src: openssh_config_system.j2
+    dest: "{{ openssh_config_dir }}\\ssh_config"
+    backup: true
+  when: openssh_client_system is defined
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: "{{ ansible_user }}"
+
+# Client configuration (per-user)
+- name: Configure OpenSSH Client (per-user)
+  when: openssh_client_users is defined and openssh_client_users | length > 0
+  block:
+    - name: Ensure .ssh directory exists for users
+      ansible.windows.win_file:
+        path: "{{ openssh_user_home_pattern }}\\{{ item.user }}\\.ssh"
+        state: directory
+      loop: "{{ openssh_client_users }}"
+      loop_control:
+        label: "{{ item.user }}"
+      become: true
+      become_method: ansible.builtin.runas
+      become_user: "{{ ansible_user }}"
+
+    - name: Deploy per-user OpenSSH client config
+      ansible.windows.win_template:
+        src: openssh_config_user.j2
+        dest: "{{ openssh_user_home_pattern }}\\{{ item.user }}\\.ssh\\config"
+        backup: true
+      loop: "{{ openssh_client_users }}"
+      loop_control:
+        label: "{{ item.user }}"
+      vars:
+        openssh_user_config: "{{ item }}"
+      become: true
+      become_method: ansible.builtin.runas
+      become_user: "{{ ansible_user }}"
+
+    - name: Set ACLs on user .ssh directories
+      ansible.windows.win_shell: |
+        icacls "{{ openssh_user_home_pattern }}\{{ item.user }}\.ssh" /inheritance:r /grant:r "SYSTEM:F" /grant:r "{{ item.user }}:F"
+      loop: "{{ openssh_client_users }}"
+      loop_control:
+        label: "{{ item.user }}"
+      become: true
+      become_method: ansible.builtin.runas
+      become_user: "{{ ansible_user }}"

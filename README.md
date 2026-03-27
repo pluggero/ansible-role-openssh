@@ -2,11 +2,11 @@
 
 [![CI](https://github.com/pluggero/ansible-role-openssh/actions/workflows/ci.yml/badge.svg)](https://github.com/pluggero/ansible-role-openssh/actions/workflows/ci.yml) [![Ansible Galaxy downloads](https://img.shields.io/ansible/role/d/pluggero/openssh?label=Galaxy%20downloads&logo=ansible&color=%23096598)](https://galaxy.ansible.com/ui/standalone/roles/pluggero/openssh)
 
-An Ansible Role that installs and configures OpenSSH server and client with secure defaults.
+An Ansible Role that installs and configures OpenSSH server and client with secure defaults on Linux and Windows.
 
 ## Requirements
 
-None.
+For Windows hosts: `ansible.windows` collection (>= 3.0.0) and WinRM configured on target hosts.
 
 ## Role Variables
 
