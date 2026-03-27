@@ -1,0 +1,12 @@
+---
+# Windows OpenSSH capabilities
+openssh_distro_pkgs:
+  - "OpenSSH.Client~~~~0.0.1.0"
+  - "OpenSSH.Server~~~~0.0.1.0"
+
+openssh_service_name: sshd
+
+openssh_sftp_subsystem_default: "sftp-server.exe"
+
+openssh_unsupported_kex:
+  - "sntrup761x25519-sha512@openssh.com"

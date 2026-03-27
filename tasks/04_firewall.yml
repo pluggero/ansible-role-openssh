@@ -1,0 +1,7 @@
+---
+- name: Import Windows-specific firewall management
+  ansible.builtin.include_tasks: noauto_firewall_Windows.yml
+  when:
+    - ansible_os_family == "Windows"
+    - openssh_server is defined
+    - openssh_firewall_manage_windows

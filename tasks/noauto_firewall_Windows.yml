@@ -1,0 +1,24 @@
+---
+- name: Ensure SSH port is open in Windows Firewall
+  ansible.windows.win_shell: |
+    $port = {{ openssh_server.port }}
+    $defaultName = "OpenSSH-Server-In-TCP"
+    $defaultDisplayName = "OpenSSH SSH Server (sshd)"
+    $defaultRule = Get-NetFirewallRule -Name "$defaultName" -ErrorAction SilentlyContinue
+    if ($defaultRule) {
+      $defaultRule | Set-NetFirewallRule `
+        -LocalPort $port `
+        -Profile Any
+    } else {
+      New-NetFirewallRule -Name $defaultName `
+        -DisplayName "$defaultDisplayName" `
+        -Enabled True `
+        -Direction Inbound `
+        -Protocol TCP `
+        -Action Allow `
+        -LocalPort $port `
+        -Profile Any
+    }
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: "{{ ansible_user }}"

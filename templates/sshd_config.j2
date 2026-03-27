@@ -16,11 +16,18 @@ AuthenticationMethods {{ openssh_server.authentication_methods | join(' ') }}
 {% endif %}
 
 # Host Keys
-HostKey /etc/ssh/ssh_host_ed25519_key
+{% if ansible_os_family == "Windows" %}
+HostKey {{ openssh_host_key_dir | replace('\\', '/') }}/ssh_host_ed25519_key
+{% else %}
+HostKey {{ openssh_host_key_dir }}/ssh_host_ed25519_key
+{% endif %}
 
 # Cryptography
 {% if openssh_server.kex is defined and openssh_server.kex | length > 0 %}
-KexAlgorithms {{ openssh_server.kex | join(',') }}
+{% set kex_list = openssh_server.kex | reject('in', openssh_unsupported_kex | default([])) | list %}
+{% if kex_list | length > 0 %}
+KexAlgorithms {{ kex_list | join(',') }}
+{% endif %}
 {% endif %}
 {% if openssh_server.ciphers is defined and openssh_server.ciphers | length > 0 %}
 Ciphers {{ openssh_server.ciphers | join(',') }}
@@ -60,7 +67,9 @@ AllowGroups {{ openssh_server.allow_groups | join(' ') }}
 # Additional security settings
 PermitEmptyPasswords {{ 'yes' if openssh_server.permit_empty_passwords | default(false) else 'no' }}
 ChallengeResponseAuthentication {{ 'yes' if openssh_server.challenge_response_authentication | default(false) else 'no' }}
+{% if ansible_os_family != "Windows" %}
 UsePAM {{ 'yes' if openssh_server.use_pam | default(true) else 'no' }}
+{% endif %}
 PrintMotd {{ 'yes' if openssh_server.print_motd | default(false) else 'no' }}
 {% if openssh_server.accept_env is defined and openssh_server.accept_env | length > 0 %}
 AcceptEnv {{ openssh_server.accept_env | join(' ') }}
