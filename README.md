@@ -31,7 +31,8 @@ openssh_server:
   permit_root_login: false # Permit root login (boolean)
   password_authentication: false # Enable password authentication (boolean)
   pubkey_authentication: true # Enable public key authentication (boolean)
-  authentication_methods: "publickey" # Authentication methods
+  authentication_methods: # Authentication methods (see below)
+    - "publickey"
   kex: # Key exchange algorithms
     - "curve25519-sha256"
     - "sntrup761x25519-sha512@openssh.com"
@@ -42,6 +43,31 @@ openssh_server:
     - "hmac-sha2-512-etm@openssh.com"
     - "hmac-sha2-256-etm@openssh.com"
 ```
+
+The `authentication_methods` variable accepts a list of authentication method specifications:
+
+- **OR logic** (multiple options): Provide multiple list items
+  ```yaml
+  authentication_methods:
+    - "publickey"
+    - "password"
+  ```
+  Renders as: `AuthenticationMethods publickey password` (user can use either method)
+
+- **AND logic** (multi-factor): Use comma-separated methods in a single item
+  ```yaml
+  authentication_methods:
+    - "publickey,keyboard-interactive"
+  ```
+  Renders as: `AuthenticationMethods publickey,keyboard-interactive` (user must use both methods)
+
+- **Combined** (multiple MFA options):
+  ```yaml
+  authentication_methods:
+    - "publickey,keyboard-interactive"
+    - "publickey,password"
+  ```
+  Renders as: `AuthenticationMethods publickey,keyboard-interactive publickey,password` (user can choose either MFA combination)
 
 ### OpenSSH Client Configuration (System-wide)
 

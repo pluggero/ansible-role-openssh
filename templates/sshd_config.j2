@@ -11,8 +11,8 @@ ListenAddress {{ addr }}
 PermitRootLogin {{ 'yes' if openssh_server.permit_root_login else 'no' }}
 PubkeyAuthentication {{ 'yes' if openssh_server.pubkey_authentication else 'no' }}
 PasswordAuthentication {{ 'yes' if openssh_server.password_authentication else 'no' }}
-{% if openssh_server.authentication_methods is defined %}
-AuthenticationMethods {{ openssh_server.authentication_methods }}
+{% if openssh_server.authentication_methods is defined and openssh_server.authentication_methods | length > 0 %}
+AuthenticationMethods {{ openssh_server.authentication_methods | join(' ') }}
 {% endif %}
 
 # Host Keys
