@@ -1,0 +1,10 @@
+---
+- name: Ensure sshd service is managed
+  ansible.windows.win_service:
+    name: "{{ openssh_service_name }}"
+    state: "{{ 'started' if openssh_service_enabled else 'stopped' }}"
+    start_mode: "{{ 'auto' if openssh_service_enabled else 'disabled' }}"
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: "{{ ansible_user }}"
+  when: openssh_server is defined

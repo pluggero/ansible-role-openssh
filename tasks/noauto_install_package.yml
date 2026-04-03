@@ -25,7 +25,7 @@
         - openssh_installed_version != openssh_pkg_mgr_version
 
     - name: Install OpenSSH package
-      when: openssh_installed_version is not defined or openssh_force_install
+      when: openssh_installed_version is not defined or openssh_installed_version == "" or openssh_force_install
       block:
         - name: Uninstall current OpenSSH installation
           ansible.builtin.include_tasks: noauto_uninstall.yml
