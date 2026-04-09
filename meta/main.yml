@@ -5,7 +5,7 @@ galaxy_info:
   role_name: openssh
   namespace: pluggero
   author: pluggero
-  description: Installs a basic configuration of OpenSSH on various Linux distributions.
+  description: Installs a basic configuration of OpenSSH on various Linux distributions and Windows.
   company: Pluggramming
   license: license (MIT)
   min_ansible_version: "2.10"
@@ -16,5 +16,6 @@ galaxy_info:
     - name: Debian
       versions:
         - bookworm
-
-  galaxy_tags: []
+    - name: Windows
+      versions:
+        - all

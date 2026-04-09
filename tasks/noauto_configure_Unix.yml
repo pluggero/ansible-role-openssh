@@ -1,0 +1,79 @@
+---
+# Unix/Linux-specific OpenSSH configuration
+- name: Set path variables for Unix
+  ansible.builtin.set_fact:
+    openssh_config_dir: "{{ openssh_config_dir_unix }}"
+    openssh_binary_dir: "{{ openssh_binary_dir_unix }}"
+    openssh_host_key_dir: "{{ openssh_host_key_dir_unix }}"
+    openssh_user_home_pattern: "{{ openssh_user_home_pattern_unix }}"
+
+- name: Generate SSH host key (ed25519) if not present
+  ansible.builtin.command: ssh-keygen -t ed25519 -f {{ openssh_host_key_dir }}/ssh_host_ed25519_key -N ""
+  args:
+    creates: "{{ openssh_host_key_dir }}/ssh_host_ed25519_key"
+  become: true
+  when: openssh_server is defined
+
+- name: Ensure SSH privilege separation directory exists
+  ansible.builtin.file:
+    path: "{{ openssh_privilege_separation_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+  when: openssh_server is defined
+
+- name: Configure OpenSSH Server
+  ansible.builtin.template:
+    src: sshd_config.j2
+    dest: "{{ openssh_config_dir }}/sshd_config"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: "{{ openssh_binary_dir }}/sshd -t -f %s"
+    backup: true
+  become: true
+  notify: Reload sshd
+  when: openssh_server is defined
+
+- name: Configure openssh Client (system-wide)
+  ansible.builtin.template:
+    src: openssh_config_system.j2
+    dest: "{{ openssh_config_dir }}/ssh_config"
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  become: true
+  when: openssh_client_system is defined
+
+- name: Configure OpenSSH Client (per-user)
+  when: openssh_client_users is defined and openssh_client_users | length > 0
+  block:
+    - name: Ensure .ssh directory exists for users
+      ansible.builtin.file:
+        path: "{{ openssh_user_home_pattern }}/{{ item.user }}/.ssh"
+        state: directory
+        owner: "{{ item.user }}"
+        group: "{{ item.user }}"
+        mode: "0700"
+      loop: "{{ openssh_client_users }}"
+      loop_control:
+        label: "{{ item.user }}"
+      become: true
+
+    - name: Deploy per-user OpenSSH client config
+      ansible.builtin.template:
+        src: openssh_config_user.j2
+        dest: "{{ openssh_user_home_pattern }}/{{ item.user }}/.ssh/config"
+        owner: "{{ item.user }}"
+        group: "{{ item.user }}"
+        mode: "0600"
+        backup: true
+      loop: "{{ openssh_client_users }}"
+      loop_control:
+        label: "{{ item.user }}"
+      vars:
+        openssh_user_config: "{{ item }}"
+      become: true
