@@ -5,16 +5,13 @@
   vars_files:
     - ../../vars/molecule_vars.yml
 
-  vars:
-    ansible_user: ansible
-    ansible_password: ansible
-    ansible_become_password: ansible
-
   pre_tasks:
-    - name: Merge openssh_server overrides with defaults
+    - name: Merge openssh_server overrides with defaults (Unix only)
       ansible.builtin.set_fact:
         openssh_server: "{{ openssh_server | default({}) | combine(openssh_server_molecule_overrides | default({}), recursive=true) }}"
-      when: openssh_server_molecule_overrides is defined
+      when:
+        - openssh_server_molecule_overrides is defined
+        - ansible_os_family != 'Windows'
 
     - name: Update apt cache
       ansible.builtin.apt:
@@ -30,6 +27,7 @@
         create_home: true
         shell: /bin/bash
       become: true
+      when: ansible_os_family != 'Windows'
 
     - name: Create test banner file
       ansible.builtin.copy:
@@ -48,6 +46,7 @@
         owner: root
         group: root
       become: true
+      when: ansible_os_family != 'Windows'
 
     - name: Create test MOTD file
       ansible.builtin.copy:
@@ -74,6 +73,7 @@
         owner: root
         group: root
       become: true
+      when: ansible_os_family != 'Windows'
 
   roles:
     - role: pluggero.openssh
