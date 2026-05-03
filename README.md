@@ -6,7 +6,7 @@ An Ansible Role that installs and configures OpenSSH server and client with secu
 
 ## Requirements
 
-For Windows hosts: `ansible.windows` collection (>= 3.0.0) and WinRM configured on target hosts.
+For Windows hosts: `ansible.windows` collection (>= 3.0.0).
 
 ## Role Variables
 
@@ -47,18 +47,22 @@ openssh_server:
 The `authentication_methods` variable accepts a list of authentication method specifications:
 
 - **OR logic** (multiple options): Provide multiple list items
+
   ```yaml
   authentication_methods:
     - "publickey"
     - "password"
   ```
+
   Renders as: `AuthenticationMethods publickey password` (user can use either method)
 
 - **AND logic** (multi-factor): Use comma-separated methods in a single item
+
   ```yaml
   authentication_methods:
     - "publickey,keyboard-interactive"
   ```
+
   Renders as: `AuthenticationMethods publickey,keyboard-interactive` (user must use both methods)
 
 - **Combined** (multiple MFA options):
