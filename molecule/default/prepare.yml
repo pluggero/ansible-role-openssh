@@ -1,0 +1,81 @@
+---
+- name: Prepare
+  hosts: all
+
+  vars_files:
+    - ../../vars/molecule_vars.yml
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_os_family == 'Debian'
+      become: true
+
+    - name: Create test user for SSH client config verification
+      ansible.builtin.user:
+        name: testuser
+        state: present
+        create_home: true
+        shell: /bin/bash
+      become: true
+      when: ansible_os_family != 'Windows'
+
+    - name: Create test user for SSH client config verification (Windows)
+      ansible.windows.win_user:
+        name: testuser
+        state: present
+        password: "TestPass123!"
+        password_never_expires: true
+        account_disabled: false
+      become: true
+      become_method: ansible.builtin.runas
+      become_user: "{{ ansible_user }}"
+      when: ansible_os_family == 'Windows'
+
+    - name: Create test banner file
+      ansible.builtin.copy:
+        content: |
+          **************************************************************************
+          *                           AUTHORIZED ACCESS ONLY                       *
+          *                                                                        *
+          *  This system is for authorized use only. All activity is monitored     *
+          *  and logged. Unauthorized access is prohibited and will be             *
+          *  prosecuted to the fullest extent of the law.                          *
+          *                                                                        *
+          *  By continuing, you consent to your activity being monitored.          *
+          **************************************************************************
+        dest: /etc/ssh/test_banner.txt
+        mode: "0644"
+        owner: root
+        group: root
+      become: true
+      when: ansible_os_family != 'Windows'
+
+    - name: Create test MOTD file
+      ansible.builtin.copy:
+        content: |
+          ================================================================================
+
+                        Welcome to the OpenSSH Test Server
+
+          ================================================================================
+
+          System Information:
+          - This is a test environment managed by Ansible
+          - All connections are monitored and logged
+          - For support, contact your system administrator
+
+          Recent Updates:
+          - OpenSSH server configured with security hardening
+          - Pre-authentication banner enabled
+          - Message of the Day (MOTD) enabled
+
+          ================================================================================
+        dest: /etc/motd
+        mode: "0644"
+        owner: root
+        group: root
+      become: true
+      when: ansible_os_family != 'Windows'

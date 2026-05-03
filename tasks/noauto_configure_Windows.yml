@@ -104,7 +104,7 @@
 
     - name: Set ACLs on user .ssh directories
       ansible.windows.win_shell: |
-        icacls "{{ openssh_user_home_pattern }}\{{ item.user }}\.ssh" /inheritance:r /grant:r "SYSTEM:F" /grant:r "{{ item.user }}:F"
+        icacls "{{ openssh_user_home_pattern }}\{{ item.user }}\.ssh" /inheritance:r /grant:r "SYSTEM:F" /grant:r ".\{{ item.user }}:F"
       loop: "{{ openssh_client_users }}"
       loop_control:
         label: "{{ item.user }}"
