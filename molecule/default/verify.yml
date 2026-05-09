@@ -4,9 +4,6 @@
   gather_facts: true
 
   vars:
-    ansible_user: ansible
-    ansible_password: ansible
-    ansible_become_password: ansible
     openssh_expected_packages:
       Debian:
         - openssh-client
@@ -22,7 +19,7 @@
     # Unix-only Verification
     # ========================================
     - name: Unix-only verification
-      when: ansible_os_family != 'Windows'
+      when: ansible_facts["os_family"] != 'Windows'
       block:
         # ========================================
         # Package Installation Verification
@@ -37,7 +34,7 @@
               - item in ansible_facts.packages
             fail_msg: "Package {{ item }} is not installed"
             success_msg: "Package {{ item }} is installed"
-          loop: "{{ openssh_expected_packages[ansible_os_family] }}"
+          loop: "{{ openssh_expected_packages[ansible_facts['os_family']] }}"
 
         # ========================================
         # SSH Server Configuration File Verification
@@ -73,9 +70,9 @@
         - name: Assert Port configuration
           ansible.builtin.assert:
             that:
-              - sshd_config_lines | select('match', '^Port 2222$') | list | length > 0
-            fail_msg: "Port 2222 not configured in sshd_config"
-            success_msg: "Port 2222 is configured"
+              - sshd_config_lines | select('match', '^Port 22$') | list | length > 0
+            fail_msg: "Port 22 not configured in sshd_config"
+            success_msg: "Port 22 is configured"
 
         - name: Assert ListenAddress configuration
           ansible.builtin.assert:
@@ -92,12 +89,12 @@
             fail_msg: "PermitRootLogin is not set to 'no'"
             success_msg: "PermitRootLogin is disabled"
 
-        - name: Assert PasswordAuthentication is disabled
+        - name: Assert PasswordAuthentication is enabled
           ansible.builtin.assert:
             that:
-              - sshd_config_lines | select('match', '^PasswordAuthentication no$') | list | length > 0
-            fail_msg: "PasswordAuthentication is not set to 'no'"
-            success_msg: "PasswordAuthentication is disabled"
+              - sshd_config_lines | select('match', '^PasswordAuthentication yes$') | list | length > 0
+            fail_msg: "PasswordAuthentication is not set to 'yes'"
+            success_msg: "PasswordAuthentication is enabled"
 
         - name: Assert PubkeyAuthentication is enabled
           ansible.builtin.assert:
@@ -109,8 +106,8 @@
         - name: Assert AuthenticationMethods is configured
           ansible.builtin.assert:
             that:
-              - sshd_config_lines | select('match', '^AuthenticationMethods publickey$') | list | length > 0
-            fail_msg: "AuthenticationMethods not set to 'publickey'"
+              - sshd_config_lines | select('match', '^AuthenticationMethods publickey password$') | list | length > 0
+            fail_msg: "AuthenticationMethods not set to 'publickey password'"
             success_msg: "AuthenticationMethods is configured correctly"
 
         - name: Assert KexAlgorithms includes secure algorithms
@@ -280,7 +277,7 @@
               - sshd_config_lines | select('match', '^DebianBanner no$') | list | length > 0
             fail_msg: "DebianBanner is not set to 'no'"
             success_msg: "DebianBanner is disabled"
-          when: ansible_os_family == 'Debian'
+          when: ansible_facts["os_family"] == 'Debian'
 
         - name: Assert Banner is configured with test banner
           ansible.builtin.assert:
@@ -351,7 +348,7 @@
             fail_msg: "Subsystem sftp is not configured correctly"
             success_msg: "Subsystem sftp is configured"
           vars:
-            expected_sftp_path: "{{ '/usr/lib/openssh/sftp-server' if ansible_os_family == 'Debian' else '/usr/lib/ssh/sftp-server' }}"
+            expected_sftp_path: "{{ '/usr/lib/openssh/sftp-server' if ansible_facts['os_family'] == 'Debian' else '/usr/lib/ssh/sftp-server' }}"
 
         # ========================================
         # SSH Client Configuration Verification (System)
@@ -660,7 +657,7 @@
         # ========================================
         - name: Get sshd service status
           ansible.builtin.systemd:
-            name: "{{ openssh_service_name[ansible_os_family] }}"
+            name: "{{ openssh_service_name[ansible_facts['os_family']] }}"
           register: sshd_service_status
 
         - name: Assert sshd service is running and enabled
@@ -674,9 +671,9 @@
         # ========================================
         # Connectivity Verification
         # ========================================
-        - name: Wait for SSH port 2222 to be available
+        - name: Wait for SSH port 22 to be available
           ansible.builtin.wait_for:
-            port: 2222
+            port: 22
             host: 0.0.0.0
             timeout: 10
           register: port_check
@@ -685,8 +682,8 @@
           ansible.builtin.assert:
             that:
               - port_check is succeeded
-            fail_msg: "SSH is not listening on port 2222"
-            success_msg: "SSH is listening on port 2222"
+            fail_msg: "SSH is not listening on port 22"
+            success_msg: "SSH is listening on port 22"
 
         # ========================================
         # Security Verification Tests
@@ -743,7 +740,7 @@
     # Windows-only Verification
     # ========================================
     - name: Windows-only verification
-      when: ansible_os_family == 'Windows'
+      when: ansible_facts["os_family"] == 'Windows'
       block:
         # ========================================
         # SSH Server Configuration File Verification
@@ -751,6 +748,7 @@
         - name: Check if sshd_config exists
           ansible.windows.win_stat:
             path: 'C:\ProgramData\ssh\sshd_config'
+            get_checksum: false
           register: win_sshd_config_stat
 
         - name: Assert sshd_config exists
@@ -765,12 +763,13 @@
         # ========================================
         - name: Read sshd_config key settings
           ansible.windows.win_shell: |
-            $config = Get-Content 'C:\ProgramData\ssh\sshd_config' -Raw
+            $config = Get-Content 'C:\ProgramData\ssh\sshd_config'
             [PSCustomObject]@{
               Port             = ($config | Select-String -Pattern '^Port\s+(\d+)' | ForEach-Object { $_.Matches[0].Groups[1].Value })
               PermitRootLogin  = ($config | Select-String -Pattern '^PermitRootLogin\s+(\S+)' | ForEach-Object { $_.Matches[0].Groups[1].Value })
               PasswordAuth     = ($config | Select-String -Pattern '^PasswordAuthentication\s+(\S+)' | ForEach-Object { $_.Matches[0].Groups[1].Value })
               PubkeyAuth       = ($config | Select-String -Pattern '^PubkeyAuthentication\s+(\S+)' | ForEach-Object { $_.Matches[0].Groups[1].Value })
+              AuthMethods      = ($config | Select-String -Pattern '^AuthenticationMethods\s+(.+)' | ForEach-Object { $_.Matches[0].Groups[1].Value.Trim() })
             } | ConvertTo-Json
           register: win_sshd_settings
           changed_when: false
@@ -785,9 +784,9 @@
         - name: Assert Port is configured
           ansible.builtin.assert:
             that:
-              - win_sshd.Port == '2222'
-            fail_msg: "Port 2222 not configured in sshd_config (got: {{ win_sshd.Port }})"
-            success_msg: "Port 2222 is configured"
+              - win_sshd.Port == '22'
+            fail_msg: "Port 22 not configured in sshd_config (got: {{ win_sshd.Port }})"
+            success_msg: "Port 22 is configured"
 
         - name: Assert PermitRootLogin is disabled
           ansible.builtin.assert:
@@ -796,12 +795,12 @@
             fail_msg: "PermitRootLogin is not set to 'no' (got: {{ win_sshd.PermitRootLogin }})"
             success_msg: "PermitRootLogin is disabled"
 
-        - name: Assert PasswordAuthentication is disabled
+        - name: Assert PasswordAuthentication is enabled
           ansible.builtin.assert:
             that:
-              - win_sshd.PasswordAuth | lower == 'no'
-            fail_msg: "PasswordAuthentication is not set to 'no' (got: {{ win_sshd.PasswordAuth }})"
-            success_msg: "PasswordAuthentication is disabled"
+              - win_sshd.PasswordAuth | lower == 'yes'
+            fail_msg: "PasswordAuthentication is not set to 'yes' (got: {{ win_sshd.PasswordAuth }})"
+            success_msg: "PasswordAuthentication is enabled"
 
         - name: Assert PubkeyAuthentication is enabled
           ansible.builtin.assert:
@@ -809,6 +808,13 @@
               - win_sshd.PubkeyAuth | lower == 'yes'
             fail_msg: "PubkeyAuthentication is not set to 'yes' (got: {{ win_sshd.PubkeyAuth }})"
             success_msg: "PubkeyAuthentication is enabled"
+
+        - name: Assert AuthenticationMethods is configured
+          ansible.builtin.assert:
+            that:
+              - win_sshd.AuthMethods == 'publickey password'
+            fail_msg: "AuthenticationMethods not set to 'publickey password' (got: {{ win_sshd.AuthMethods }})"
+            success_msg: "AuthenticationMethods is configured correctly"
 
         # ========================================
         # Service State Verification
@@ -863,9 +869,9 @@
         - name: Assert SSH firewall rule allows correct port
           ansible.builtin.assert:
             that:
-              - win_fw.Port | string == '2222'
-            fail_msg: "SSH firewall rule port is not 2222 (got: {{ win_fw.Port }})"
-            success_msg: "SSH firewall rule allows port 2222"
+              - win_fw.Port | string == '22'
+            fail_msg: "SSH firewall rule port is not 22 (got: {{ win_fw.Port }})"
+            success_msg: "SSH firewall rule allows port 22"
 
         # ========================================
         # SSH Client Configuration Verification (System)
@@ -873,6 +879,7 @@
         - name: Check if system ssh_config exists
           ansible.windows.win_stat:
             path: 'C:\ProgramData\ssh\ssh_config'
+            get_checksum: false
           register: win_ssh_config_stat
 
         - name: Assert system ssh_config exists
