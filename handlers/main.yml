@@ -4,4 +4,17 @@
     name: "{{ openssh_service_name }}"
     state: reloaded
   become: true
-  when: openssh_service_enabled | default(true)
+  when:
+    - openssh_service_enabled | default(true)
+    - ansible_os_family != "Windows"
+
+- name: Reload sshd
+  ansible.windows.win_service:
+    name: "{{ openssh_service_name }}"
+    state: restarted
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: "{{ ansible_user }}"
+  when:
+    - openssh_service_enabled | default(true)
+    - ansible_os_family == "Windows"
