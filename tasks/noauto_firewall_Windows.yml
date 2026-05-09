@@ -1,4 +1,25 @@
 ---
+- name: Check existing SSH firewall rule
+  ansible.windows.win_shell: |
+    $port = {{ openssh_server.port }}
+    $ruleName = "OpenSSH-Server-In-TCP"
+    $rule = Get-NetFirewallRule -Name $ruleName -ErrorAction SilentlyContinue
+    if ($rule) {
+      $portFilter = $rule | Get-NetFirewallPortFilter
+      if ($portFilter.LocalPort -eq $port -and $rule.Profile -match 'Any') {
+        Write-Output "ok"
+      } else {
+        Write-Output "update"
+      }
+    } else {
+      Write-Output "create"
+    }
+  register: openssh_firewall_rule_state
+  changed_when: false
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: "{{ ansible_user }}"
+
 - name: Ensure SSH port is open in Windows Firewall
   ansible.windows.win_shell: |
     $port = {{ openssh_server.port }}
@@ -19,6 +40,7 @@
         -LocalPort $port `
         -Profile Any
     }
+  when: openssh_firewall_rule_state.stdout | trim != 'ok'
   become: true
   become_method: ansible.builtin.runas
   become_user: "{{ ansible_user }}"

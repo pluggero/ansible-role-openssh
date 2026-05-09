@@ -34,6 +34,15 @@
       become_user: "{{ ansible_user }}"
       when: ansible_os_family == 'Windows'
 
+    - name: Initialize Windows user profile for testuser
+      ansible.windows.win_user_profile:
+        username: testuser
+        state: present
+      become: true
+      become_method: ansible.builtin.runas
+      become_user: SYSTEM
+      when: ansible_os_family == 'Windows'
+
     - name: Create test banner file
       ansible.builtin.copy:
         content: |

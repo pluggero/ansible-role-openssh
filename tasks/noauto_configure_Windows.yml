@@ -25,9 +25,37 @@
   become_user: SYSTEM
 
 # Set ACLs on config directory
-- name: Set ACLs on SSH config directory
-  ansible.windows.win_shell: |
-    icacls "{{ openssh_config_dir }}" /inheritance:r /grant:r "SYSTEM:(OI)(CI)F" /grant:r "Administrators:(OI)(CI)F"
+- name: Disable ACL inheritance on SSH config directory
+  ansible.windows.win_acl_inheritance:
+    path: "{{ openssh_config_dir }}"
+    reorganize: true
+    state: absent
+  when: openssh_server is defined
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: "{{ ansible_user }}"
+
+- name: Grant SYSTEM full control on SSH config directory
+  ansible.windows.win_acl:
+    path: "{{ openssh_config_dir }}"
+    user: SYSTEM
+    rights: FullControl
+    type: allow
+    state: present
+    inherit: ContainerInherit, ObjectInherit
+  when: openssh_server is defined
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: "{{ ansible_user }}"
+
+- name: Grant Administrators full control on SSH config directory
+  ansible.windows.win_acl:
+    path: "{{ openssh_config_dir }}"
+    user: Administrators
+    rights: FullControl
+    type: allow
+    state: present
+    inherit: ContainerInherit, ObjectInherit
   when: openssh_server is defined
   become: true
   become_method: ansible.builtin.runas
@@ -49,14 +77,41 @@
   ansible.windows.win_shell: |
     & "{{ openssh_binary_dir }}\sshd.exe" -t -f "{{ openssh_config_dir }}\sshd_config"
   when: openssh_server is defined
+  changed_when: false
   become: true
   become_method: ansible.builtin.runas
   become_user: "{{ ansible_user }}"
 
 # Set ACLs on sshd_config
-- name: Set ACLs on sshd_config
-  ansible.windows.win_shell: |
-    icacls "{{ openssh_config_dir }}\sshd_config" /inheritance:r /grant:r "SYSTEM:F" /grant:r "Administrators:F"
+- name: Disable ACL inheritance on sshd_config
+  ansible.windows.win_acl_inheritance:
+    path: "{{ openssh_config_dir }}\\sshd_config"
+    reorganize: true
+    state: absent
+  when: openssh_server is defined
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: "{{ ansible_user }}"
+
+- name: Grant SYSTEM full control on sshd_config
+  ansible.windows.win_acl:
+    path: "{{ openssh_config_dir }}\\sshd_config"
+    user: SYSTEM
+    rights: FullControl
+    type: allow
+    state: present
+  when: openssh_server is defined
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: "{{ ansible_user }}"
+
+- name: Grant Administrators full control on sshd_config
+  ansible.windows.win_acl:
+    path: "{{ openssh_config_dir }}\\sshd_config"
+    user: Administrators
+    rights: FullControl
+    type: allow
+    state: present
   when: openssh_server is defined
   become: true
   become_method: ansible.builtin.runas
@@ -102,9 +157,39 @@
       become_method: ansible.builtin.runas
       become_user: "{{ ansible_user }}"
 
-    - name: Set ACLs on user .ssh directories
-      ansible.windows.win_shell: |
-        icacls "{{ openssh_user_home_pattern }}\{{ item.user }}\.ssh" /inheritance:r /grant:r "SYSTEM:F" /grant:r ".\{{ item.user }}:F"
+    - name: Disable ACL inheritance on user .ssh directories
+      ansible.windows.win_acl_inheritance:
+        path: "{{ openssh_user_home_pattern }}\\{{ item.user }}\\.ssh"
+        reorganize: true
+        state: absent
+      loop: "{{ openssh_client_users }}"
+      loop_control:
+        label: "{{ item.user }}"
+      become: true
+      become_method: ansible.builtin.runas
+      become_user: "{{ ansible_user }}"
+
+    - name: Grant SYSTEM full control on user .ssh directories
+      ansible.windows.win_acl:
+        path: "{{ openssh_user_home_pattern }}\\{{ item.user }}\\.ssh"
+        user: SYSTEM
+        rights: FullControl
+        type: allow
+        state: present
+      loop: "{{ openssh_client_users }}"
+      loop_control:
+        label: "{{ item.user }}"
+      become: true
+      become_method: ansible.builtin.runas
+      become_user: "{{ ansible_user }}"
+
+    - name: Grant user full control on their .ssh directory
+      ansible.windows.win_acl:
+        path: "{{ openssh_user_home_pattern }}\\{{ item.user }}\\.ssh"
+        user: "{{ item.user }}"
+        rights: FullControl
+        type: allow
+        state: present
       loop: "{{ openssh_client_users }}"
       loop_control:
         label: "{{ item.user }}"
