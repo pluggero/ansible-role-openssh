@@ -1,0 +1,75 @@
+---
+# Per-user SSH agent socket management (Unix/Linux)
+- name: Manage SSH agent for users
+  when: openssh_agent_users | length > 0
+  block:
+    - name: Ensure systemd user directory exists
+      ansible.builtin.file:
+        path: "{{ openssh_user_home_pattern }}/{{ item.user }}/.config/systemd/user"
+        state: directory
+        owner: "{{ item.user }}"
+        group: "{{ item.user }}"
+        mode: "0700"
+      loop: "{{ openssh_agent_users }}"
+      loop_control:
+        label: "{{ item.user }}"
+      become: true
+
+    - name: Deploy ssh-agent.socket unit
+      ansible.builtin.template:
+        src: ssh-agent.socket.j2
+        dest: "{{ openssh_user_home_pattern }}/{{ item.user }}/.config/systemd/user/ssh-agent.socket"
+        owner: "{{ item.user }}"
+        group: "{{ item.user }}"
+        mode: "0644"
+      loop: "{{ openssh_agent_users }}"
+      loop_control:
+        label: "{{ item.user }}"
+      become: true
+
+    - name: Check linger status for ssh-agent users
+      ansible.builtin.command:
+        cmd: loginctl show-user {{ item.user }} --property=Linger
+      become: true
+      loop: "{{ openssh_agent_users }}"
+      loop_control:
+        label: "{{ item.user }}"
+      register: openssh_agent_linger_status
+      changed_when: false
+      failed_when: false
+
+    - name: Enable linger for ssh-agent users
+      ansible.builtin.command:
+        cmd: loginctl enable-linger {{ item.item.user }}
+      become: true
+      loop: "{{ openssh_agent_linger_status.results }}"
+      loop_control:
+        label: "{{ item.item.user }}"
+      when: item.stdout != 'Linger=yes'
+      changed_when: true
+
+    - name: Check ssh-agent.socket enabled state  # noqa: command-instead-of-module
+      ansible.builtin.command:
+        cmd: systemctl --machine={{ item.user }}@.host --user is-enabled ssh-agent.socket
+      become: true
+      loop: "{{ openssh_agent_users }}"
+      loop_control:
+        label: "{{ item.user }}"
+      register: openssh_agent_socket_state
+      changed_when: false
+      failed_when: false
+
+    - name: Manage ssh-agent.socket state  # noqa: command-instead-of-module
+      ansible.builtin.command:
+        cmd: >-
+          systemctl --machine={{ item.item.user }}@.host --user
+          {{ 'enable --now' if (item.item.enabled | default(true)) else 'disable --now' }}
+          ssh-agent.socket
+      become: true
+      loop: "{{ openssh_agent_socket_state.results }}"
+      loop_control:
+        label: "{{ item.item.user }}"
+      when: >-
+        (item.item.enabled | default(true) and item.stdout != 'enabled') or
+        (not (item.item.enabled | default(true)) and item.stdout != 'disabled')
+      changed_when: true

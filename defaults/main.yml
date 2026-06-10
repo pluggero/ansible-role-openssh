@@ -107,3 +107,10 @@ openssh_client_users: []
 #         identities_only: true
 #         strict_host_key_checking: true
 #         user_known_hosts_file: "~/.ssh/known_hosts_prod"
+
+openssh_agent_users: []
+# OpenSSH Agent Per-User Configuration
+# Example:
+# openssh_agent_users:
+#   - user: "alice"
+#     enabled: true

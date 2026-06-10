@@ -31,3 +31,7 @@ openssh_client_users:
         hostname: "dev.example.com"
         forward_agent: true
         strict_host_key_checking: false
+
+openssh_agent_users:
+  - user: testuser
+    enabled: true
