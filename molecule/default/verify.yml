@@ -736,6 +736,49 @@
             - /tmp/test_key.pub
           changed_when: false
 
+        # ========================================
+        # SSH Agent Verification
+        # ========================================
+        - name: Check ssh-agent.socket unit file exists
+          ansible.builtin.stat:
+            path: /home/testuser/.config/systemd/user/ssh-agent.socket
+          register: agent_socket_file
+          become: true
+
+        - name: Assert ssh-agent.socket unit file exists with correct permissions
+          ansible.builtin.assert:
+            that:
+              - agent_socket_file.stat.exists
+              - agent_socket_file.stat.isreg
+              - agent_socket_file.stat.mode == '0644'
+              - agent_socket_file.stat.pw_name == 'testuser'
+            fail_msg: "/home/testuser/.config/systemd/user/ssh-agent.socket does not exist or has incorrect permissions"
+            success_msg: "ssh-agent.socket unit file exists with correct permissions"
+
+        - name: Get ssh-agent.socket status for testuser
+          ansible.builtin.command:
+            cmd: >-
+              systemctl --machine=testuser@.host --user show ssh-agent.socket
+              --property=UnitFileState,ActiveState
+          become: true
+          changed_when: false
+          register: agent_socket_status_raw
+
+        - name: Parse ssh-agent.socket status
+          ansible.builtin.set_fact:
+            agent_socket_status:
+              status:
+                UnitFileState: "{{ agent_socket_status_raw.stdout | regex_search('UnitFileState=(\\S+)', '\\1') | first }}"
+                ActiveState: "{{ agent_socket_status_raw.stdout | regex_search('ActiveState=(\\S+)', '\\1') | first }}"
+
+        - name: Assert ssh-agent.socket is enabled and active
+          ansible.builtin.assert:
+            that:
+              - agent_socket_status.status.UnitFileState == 'enabled'
+              - agent_socket_status.status.ActiveState == 'active'
+            fail_msg: "ssh-agent.socket is not enabled or not active for testuser"
+            success_msg: "ssh-agent.socket is enabled and active for testuser"
+
     # ========================================
     # Windows-only Verification
     # ========================================

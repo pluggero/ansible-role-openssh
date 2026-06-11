@@ -1,0 +1,7 @@
+---
+- name: Configure SSH Agent
+  ansible.builtin.include_tasks: noauto_agent_Unix.yml
+  when:
+    - ansible_os_family != "Windows"
+    - openssh_agent_users is defined
+    - openssh_agent_users | length > 0
