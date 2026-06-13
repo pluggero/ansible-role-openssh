@@ -53,7 +53,7 @@ jobs:
             molecule_memory: 4096
           - molecule_distro: archlinux
             molecule_os_family: "unix"
-            molecule_box_version: "2026.05.31"
+            molecule_box_version: "2026.06.12"
             molecule_shell: "/bin/bash"
             molecule_memory: 4096
           # Windows: vagrant_experimental=none_communicator disables the winssh communicator
