@@ -164,7 +164,7 @@
         - name: Assert PermitRootLogin is set to 'no' in effective configuration
           ansible.builtin.assert:
             that:
-              - sshd_effective_config.stdout == 'permitrootlogin no'
+              - sshd_effective_config.stdout | lower == 'permitrootlogin no'
             fail_msg: "PermitRootLogin is not set to 'no' in effective sshd configuration. Got: {{ sshd_effective_config.stdout }}"
             success_msg: "PermitRootLogin is set to 'no' in effective sshd configuration"
 
