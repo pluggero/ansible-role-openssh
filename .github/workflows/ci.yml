@@ -4,6 +4,7 @@ name: CI
   pull_request:
   schedule:
     - cron: "0 7 * * 5"
+  workflow_dispatch:
 
 concurrency:
   group: ansible-roles-ci

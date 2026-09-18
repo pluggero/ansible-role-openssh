@@ -13,4 +13,4 @@
         - openssh_server_molecule_overrides is defined
 
   roles:
-    - role: pluggero.openssh
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"
