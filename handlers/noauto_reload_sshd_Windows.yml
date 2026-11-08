@@ -1,0 +1,8 @@
+---
+- name: Reload sshd (Windows)
+  ansible.windows.win_service:
+    name: "{{ openssh_service_name }}"
+    state: restarted
+  become: true
+  become_method: ansible.builtin.runas
+  become_user: "{{ ansible_user }}"
