@@ -8,13 +8,9 @@
     - openssh_service_enabled | default(true)
     - ansible_os_family != "Windows"
 
+# Dynamic include so ansible.windows isn't required on non-Windows hosts
 - name: Reload sshd
-  ansible.windows.win_service:
-    name: "{{ openssh_service_name }}"
-    state: restarted
-  become: true
-  become_method: ansible.builtin.runas
-  become_user: "{{ ansible_user }}"
+  ansible.builtin.include_tasks: noauto_reload_sshd_Windows.yml
   when:
     - openssh_service_enabled | default(true)
     - ansible_os_family == "Windows"
