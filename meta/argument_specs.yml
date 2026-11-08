@@ -1,0 +1,275 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure OpenSSH server and client on Linux and Windows.
+    options:
+      openssh_install_method:
+        type: str
+        default: package
+        description: Method used to install OpenSSH.
+      openssh_force_install:
+        type: bool
+        default: false
+        description: Force reinstall even if the installed version already satisfies requirements.
+      openssh_service_enabled:
+        type: bool
+        default: false
+        description: Whether the sshd service should be enabled and started.
+      openssh_firewall_manage_windows:
+        type: bool
+        default: true
+        description: Manage the Windows Firewall rule for sshd (Windows only).
+      openssh_config_dir_unix:
+        type: str
+        default: /etc/ssh
+        description: Path to the OpenSSH configuration directory on Unix-like systems.
+      openssh_config_dir_windows:
+        type: str
+        default: 'C:\ProgramData\ssh'
+        description: Path to the OpenSSH configuration directory on Windows.
+      openssh_binary_dir_unix:
+        type: str
+        default: /usr/sbin
+        description: Path to the OpenSSH binaries on Unix-like systems.
+      openssh_binary_dir_windows:
+        type: str
+        default: 'C:\Windows\System32\OpenSSH'
+        description: Path to the OpenSSH binaries on Windows.
+      openssh_host_key_dir_unix:
+        type: str
+        default: /etc/ssh
+        description: Path to the OpenSSH host keys on Unix-like systems.
+      openssh_host_key_dir_windows:
+        type: str
+        default: 'C:\ProgramData\ssh'
+        description: Path to the OpenSSH host keys on Windows.
+      openssh_user_home_pattern_unix:
+        type: str
+        default: /home
+        description: Base directory pattern for user home directories on Unix-like systems.
+      openssh_user_home_pattern_windows:
+        type: str
+        default: 'C:\Users'
+        description: Base directory pattern for user home directories on Windows.
+      openssh_privilege_separation_dir:
+        type: str
+        default: /run/sshd
+        description: Path to the privilege separation directory (Unix only).
+
+      openssh_server:
+        type: dict
+        description: sshd_config options.
+        options:
+          port:
+            type: int
+            default: 2222
+            description: SSH listen port.
+          listen_address:
+            type: list
+            elements: str
+            description: Addresses sshd listens on.
+          permit_root_login:
+            type: bool
+            default: false
+            description: Allow root login.
+          password_authentication:
+            type: bool
+            default: false
+            description: Allow password authentication.
+          pubkey_authentication:
+            type: bool
+            default: true
+            description: Allow public key authentication.
+          authentication_methods:
+            type: list
+            elements: str
+            description: Allowed authentication methods.
+          kex:
+            type: list
+            elements: str
+            description: Allowed key exchange algorithms.
+          ciphers:
+            type: list
+            elements: str
+            description: Allowed ciphers.
+          macs:
+            type: list
+            elements: str
+            description: Allowed MAC algorithms.
+          syslog_facility:
+            type: str
+            default: AUTH
+            description: Syslog facility code.
+          log_level:
+            type: str
+            default: INFO
+            description: Logging verbosity.
+          max_auth_tries:
+            type: int
+            default: 2
+            description: Max authentication attempts per connection.
+          max_sessions:
+            type: int
+            default: 10
+            description: Max sessions per network connection.
+          max_startups:
+            type: str
+            default: "5:30:50"
+            description: Concurrent unauthenticated connection throttling.
+          login_grace_time:
+            type: int
+            default: 20
+            description: Seconds allowed to complete authentication.
+          allow_users:
+            type: list
+            elements: str
+            description: Users allowed to log in.
+          allow_groups:
+            type: list
+            elements: str
+            description: Groups allowed to log in.
+          x11_forwarding:
+            type: bool
+            default: false
+            description: Allow X11 forwarding.
+          allow_tcp_forwarding:
+            type: bool
+            default: false
+            description: Allow TCP forwarding.
+          allow_agent_forwarding:
+            type: bool
+            default: false
+            description: Allow agent forwarding.
+          gateway_ports:
+            type: bool
+            default: false
+            description: Allow remote hosts to connect to forwarded ports.
+          permit_tunnel:
+            type: bool
+            default: false
+            description: Allow tun(4) device forwarding.
+          permit_empty_passwords:
+            type: bool
+            default: false
+            description: Allow login to accounts with empty passwords.
+          challenge_response_authentication:
+            type: bool
+            default: false
+            description: Allow challenge-response authentication.
+          use_pam:
+            type: bool
+            default: true
+            description: Enable PAM.
+          print_motd:
+            type: bool
+            default: false
+            description: Print /etc/motd on login.
+          accept_env:
+            type: list
+            elements: str
+            description: Environment variables accepted from the client.
+          debian_banner:
+            type: bool
+            default: false
+            description: Show the Debian banner on login.
+          banner:
+            type: str
+            description: Path to a banner file to display before authentication.
+
+      openssh_client_system:
+        type: dict
+        description: System-wide ssh_config options applied to the global "Host *" block.
+        options:
+          forward_agent:
+            type: bool
+            default: false
+            description: Enable SSH agent forwarding.
+          hash_known_hosts:
+            type: bool
+            default: true
+            description: Hash hostnames in known_hosts.
+          add_keys_to_agent:
+            type: bool
+            default: false
+            description: Automatically add keys to ssh-agent.
+          server_alive_interval:
+            type: int
+            default: 60
+            description: Seconds between keepalive messages.
+          server_alive_count_max:
+            type: int
+            default: 3
+            description: Failed keepalives before disconnect.
+          compression:
+            type: bool
+            default: false
+            description: Enable compression.
+          update_host_keys:
+            type: bool
+            default: true
+            description: Automatically update known_hosts with new keys.
+          send_env:
+            type: list
+            elements: str
+            description: Environment variables to send to the server.
+
+      openssh_client_users:
+        type: list
+        elements: dict
+        default: []
+        description: Per-user SSH client configuration.
+        options:
+          user:
+            type: str
+            required: true
+            description: Username to configure.
+          config:
+            type: list
+            elements: dict
+            description: List of Host blocks for this user's ssh_config.
+            options:
+              host:
+                type: str
+                required: true
+                description: Host pattern.
+              hostname:
+                type: str
+                description: Real hostname to connect to.
+              identity_file:
+                type: str
+                description: Path to the identity file.
+              identities_only:
+                type: bool
+                description: Only use configured identity file.
+              user:
+                type: str
+                description: Remote username.
+              forward_agent:
+                type: bool
+                description: Enable SSH agent forwarding for this host.
+              proxy_jump:
+                type: str
+                description: Jump host.
+              strict_host_key_checking:
+                type: str
+                description: Host key checking policy.
+              user_known_hosts_file:
+                type: str
+                description: Path to this host's known_hosts file.
+              port:
+                type: str
+                description: SSH port for this host.
+
+      openssh_agent_users:
+        type: list
+        elements: dict
+        default: []
+        description: Per-user ssh-agent enablement.
+        options:
+          user:
+            type: str
+            required: true
+            description: Username to configure.
+          enabled:
+            type: bool
+            description: Whether the ssh-agent should be enabled for this user.

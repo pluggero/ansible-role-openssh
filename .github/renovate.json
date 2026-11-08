@@ -12,7 +12,8 @@
         "pip_requirements"
       ],
       "automerge": true,
-      "automergeType": "pr"
+      "automergeType": "pr",
+      "minimumReleaseAge": "7 days"
     },
     {
       "matchManagers": [
@@ -22,7 +23,12 @@
         "python/cpython"
       ],
       "automerge": true,
-      "automergeType": "pr"
+      "automergeType": "pr",
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "matchDatasources": ["github-runners"],
+      "automerge": false
     },
     {
       "matchManagers": [
@@ -39,7 +45,8 @@
         "/^pluggero\\/vagrant-.*-ansible$/"
       ],
       "automerge": true,
-      "automergeType": "pr"
+      "automergeType": "pr",
+      "minimumReleaseAge": "7 days"
     }
   ],
   "enabledManagers": [
@@ -56,6 +63,12 @@
   "assignees": [
     "pluggero"
   ],
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "minimumReleaseAge": null,
+    "automerge": false,
+    "labels": ["security"]
+  },
   "customManagers": [
     {
       "customType": "regex",
